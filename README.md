@@ -66,11 +66,10 @@ No third-party packages are required.
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/filewave-pro.git
-cd filewave-pro
+git clone https://github.com/NishantRajora/FileWave-File-Server
 
 # Run directly — no install step needed
-python filewave.py
+python Server.py
 ```
 
 ---
@@ -80,7 +79,7 @@ python filewave.py
 ### 1. Launch the app
 
 ```bash
-python filewave.py
+python Server.py
 ```
 
 The desktop control panel opens.
@@ -124,7 +123,7 @@ Click **■ Stop** in the control panel, or close the window.
 
 ## API Endpoints
 
-FileWave Pro exposes a minimal HTTP API used by the web UI.
+FileWave  exposes a minimal HTTP API used by the web UI.
 
 | Method | Path | Description |
 |---|---|---|
@@ -139,8 +138,8 @@ FileWave Pro exposes a minimal HTTP API used by the web UI.
 ## Project Structure
 
 ```
-filewave-pro/
-└── filewave.py       # Everything — server, GUI, and web UI in one file
+FileWave-File-Server/
+└── Server.py       # Everything — server, GUI, and web UI in one file
 ```
 
 The entire project is intentionally a single file. The web UI HTML is embedded as a Python string inside `render_page()` and served dynamically.
