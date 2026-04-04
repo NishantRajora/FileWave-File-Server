@@ -302,6 +302,7 @@ status_frame.pack(padx=20, pady=10, fill="x")
 tk.Label(status_frame, text="Status:", bg="#1e293b", fg="white").grid(row=0, column=0)
 tk.Label(status_frame, textvariable=status, bg="#1e293b", fg="yellow").grid(row=0, column=1)
 
+
 tk.Label(status_frame, text="Local:", bg="#1e293b", fg="white").grid(row=1, column=0)
 tk.Label(status_frame, textvariable=local, bg="#1e293b", fg="cyan").grid(row=1, column=1)
 
