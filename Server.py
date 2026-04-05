@@ -4,7 +4,7 @@ import socket
 import os
 import threading
 import tkinter as tk
-from tkinter import filedialog, scrolledtext, ttk
+from tkinter import filedialog, font as tkfont
 import webbrowser
 from pathlib import Path
 import urllib.parse
@@ -71,7 +71,6 @@ def render_page():
     line-height: 1.5;
   }
 
-  /* ── Layout ── */
   .app-shell {
     display: grid;
     grid-template-rows: 48px 1fr;
@@ -79,7 +78,6 @@ def render_page():
     overflow: hidden;
   }
 
-  /* ── Top Nav Bar ── */
   .navbar {
     background: var(--panel);
     border-bottom: 1px solid var(--border);
@@ -108,12 +106,7 @@ def render_page():
     font-size: 13px;
   }
 
-  .nav-sep {
-    width: 1px;
-    height: 20px;
-    background: var(--border);
-    margin: 0 4px;
-  }
+  .nav-sep { width: 1px; height: 20px; background: var(--border); margin: 0 4px; }
 
   .nav-pill {
     display: flex;
@@ -126,40 +119,27 @@ def render_page():
     font-weight: 500;
     letter-spacing: 0.3px;
     border: 1px solid;
+    transition: all 0.4s ease;
   }
 
-  .nav-pill.live   { color: var(--green); border-color: rgba(34,197,94,0.35); background: var(--green-dim); }
-  .nav-pill.offline { color: var(--red); border-color: rgba(239,68,68,0.35); background: var(--red-dim); }
+  .nav-pill.live    { color: var(--green); border-color: rgba(34,197,94,0.35); background: var(--green-dim); }
+  .nav-pill.offline { color: var(--red);   border-color: rgba(239,68,68,0.35); background: var(--red-dim);   }
 
-  .nav-pill .dot {
-    width: 6px; height: 6px;
-    border-radius: 50%;
-    background: currentColor;
-  }
-
+  .nav-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
   .nav-pill.live .dot { animation: blink 1.8s ease-in-out infinite; }
 
-  @keyframes blink {
-    0%,100% { opacity: 1; }
-    50%      { opacity: 0.35; }
-  }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.35} }
 
   .nav-spacer { flex: 1; }
 
-  .nav-info {
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-3);
-  }
+  .nav-info { font-family: var(--mono); font-size: 11px; color: var(--text-3); }
 
-  /* ── Main content ── */
   .content {
     display: grid;
     grid-template-columns: 340px 1fr;
     overflow: hidden;
   }
 
-  /* ── Left Panel ── */
   .left-panel {
     background: var(--surface);
     border-right: 1px solid var(--border);
@@ -168,7 +148,6 @@ def render_page():
     overflow: hidden;
   }
 
-  /* ── Right Panel ── */
   .right-panel {
     display: flex;
     flex-direction: column;
@@ -176,7 +155,6 @@ def render_page():
     background: var(--bg);
   }
 
-  /* ── Section headers ── */
   .section-head {
     padding: 12px 16px 10px;
     border-bottom: 1px solid var(--border);
@@ -197,14 +175,7 @@ def render_page():
     gap: 7px;
   }
 
-  .section-title .icon { font-size: 13px; }
-
-  /* ── Upload zone ── */
-  .upload-area {
-    padding: 14px;
-    border-bottom: 1px solid var(--border);
-    flex-shrink: 0;
-  }
+  .upload-area { padding: 14px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
 
   .drop-zone {
     border: 1.5px dashed var(--border2);
@@ -216,29 +187,11 @@ def render_page():
     background: var(--bg);
   }
 
-  .drop-zone:hover, .drop-zone.drag-over {
-    border-color: var(--blue);
-    background: var(--blue-dim);
-  }
+  .drop-zone:hover, .drop-zone.drag-over { border-color: var(--blue); background: var(--blue-dim); }
 
-  .drop-icon {
-    font-size: 26px;
-    margin-bottom: 8px;
-    display: block;
-  }
-
-  .drop-zone h3 {
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--text);
-    margin-bottom: 3px;
-  }
-
-  .drop-zone p {
-    font-size: 11px;
-    color: var(--text-3);
-    font-family: var(--mono);
-  }
+  .drop-icon { font-size: 26px; margin-bottom: 8px; display: block; }
+  .drop-zone h3 { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .drop-zone p  { font-size: 11px; color: var(--text-3); font-family: var(--mono); }
 
   #fileInput { display: none; }
 
@@ -257,40 +210,17 @@ def render_page():
     line-height: 1;
   }
 
-  .btn-primary {
-    background: var(--blue);
-    color: #fff;
-    border-color: var(--blue);
-  }
+  .btn-primary { background: var(--blue); color: #fff; border-color: var(--blue); }
   .btn-primary:hover { background: #2563eb; border-color: #2563eb; }
 
-  .btn-ghost {
-    background: transparent;
-    color: var(--text-2);
-    border-color: var(--border2);
-  }
+  .btn-ghost { background: transparent; color: var(--text-2); border-color: var(--border2); }
   .btn-ghost:hover { background: var(--panel); color: var(--text); border-color: var(--blue); }
-
-  .btn-danger {
-    background: transparent;
-    color: var(--red);
-    border-color: rgba(239,68,68,0.4);
-  }
-  .btn-danger:hover { background: var(--red-dim); }
 
   .btn-sm { padding: 4px 10px; font-size: 12px; }
 
-  .upload-btn-row {
-    margin-top: 10px;
-    display: flex;
-    justify-content: center;
-  }
+  .upload-btn-row { margin-top: 10px; display: flex; justify-content: center; }
 
-  /* ── Progress ── */
-  .progress-wrap {
-    margin-top: 12px;
-    display: none;
-  }
+  .progress-wrap { margin-top: 12px; display: none; }
   .progress-wrap.active { display: block; }
 
   .progress-row {
@@ -302,22 +232,9 @@ def render_page():
     margin-bottom: 6px;
   }
 
-  .progress-track {
-    height: 4px;
-    background: var(--border);
-    border-radius: 99px;
-    overflow: hidden;
-  }
+  .progress-track { height: 4px; background: var(--border); border-radius: 99px; overflow: hidden; }
+  .progress-fill  { height: 100%; background: var(--blue); border-radius: 99px; width: 0%; transition: width 0.25s ease; }
 
-  .progress-fill {
-    height: 100%;
-    background: var(--blue);
-    border-radius: 99px;
-    width: 0%;
-    transition: width 0.25s ease;
-  }
-
-  /* ── Stats strip ── */
   .stats-strip {
     padding: 8px 16px;
     border-bottom: 1px solid var(--border);
@@ -326,21 +243,12 @@ def render_page():
     flex-shrink: 0;
   }
 
-  .stat-item {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    font-family: var(--mono);
-    font-size: 11px;
-    color: var(--text-3);
-  }
-
+  .stat-item { display: flex; align-items: center; gap: 5px; font-family: var(--mono); font-size: 11px; color: var(--text-3); }
   .stat-item strong { color: var(--text); font-weight: 500; }
   .stat-item .dot-blue  { color: var(--blue); }
   .stat-item .dot-green { color: var(--green); }
   .stat-item .dot-yellow{ color: var(--yellow); }
 
-  /* ── Toolbar ── */
   .toolbar {
     padding: 10px 14px;
     border-bottom: 1px solid var(--border);
@@ -388,12 +296,7 @@ def render_page():
     outline: none;
   }
 
-  .view-grp {
-    display: flex;
-    border: 1px solid var(--border2);
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-  }
+  .view-grp { display: flex; border: 1px solid var(--border2); border-radius: var(--radius-sm); overflow: hidden; }
 
   .view-btn {
     padding: 5px 10px;
@@ -410,12 +313,7 @@ def render_page():
   .view-btn.active { background: var(--blue-dim); color: var(--blue); }
   .view-btn:hover:not(.active) { background: var(--panel); color: var(--text); }
 
-  /* ── File list ── */
-  .file-scroll {
-    flex: 1;
-    overflow-y: auto;
-    padding: 8px;
-  }
+  .file-scroll { flex: 1; overflow-y: auto; padding: 8px; }
 
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
@@ -436,15 +334,9 @@ def render_page():
     opacity: 0;
   }
 
-  @keyframes rowIn {
-    from { opacity: 0; transform: translateY(4px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
+  @keyframes rowIn { from{opacity:0;transform:translateY(4px)} to{opacity:1;transform:translateY(0)} }
 
-  .file-item:hover {
-    background: var(--blue-dim);
-    border-color: var(--border);
-  }
+  .file-item:hover { background: var(--blue-dim); border-color: var(--border); }
 
   .file-icon {
     width: 34px; height: 34px;
@@ -455,15 +347,14 @@ def render_page():
     border: 1px solid var(--border);
   }
 
-  /* type-color badges */
-  .ic-img   { background: rgba(239,68,68,0.1);    border-color: rgba(239,68,68,0.2); }
-  .ic-video { background: rgba(59,130,246,0.1);   border-color: rgba(59,130,246,0.2); }
-  .ic-audio { background: rgba(234,179,8,0.1);    border-color: rgba(234,179,8,0.2); }
-  .ic-doc   { background: rgba(34,197,94,0.1);    border-color: rgba(34,197,94,0.2); }
-  .ic-code  { background: rgba(59,130,246,0.1);   border-color: rgba(59,130,246,0.2); }
-  .ic-arch  { background: rgba(234,179,8,0.1);    border-color: rgba(234,179,8,0.2); }
-  .ic-data  { background: rgba(34,197,94,0.1);    border-color: rgba(34,197,94,0.2); }
-  .ic-other { background: var(--surface);          border-color: var(--border); }
+  .ic-img   { background: rgba(239,68,68,0.1);  border-color: rgba(239,68,68,0.2); }
+  .ic-video { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.2); }
+  .ic-audio { background: rgba(234,179,8,0.1);  border-color: rgba(234,179,8,0.2); }
+  .ic-doc   { background: rgba(34,197,94,0.1);  border-color: rgba(34,197,94,0.2); }
+  .ic-code  { background: rgba(59,130,246,0.1); border-color: rgba(59,130,246,0.2); }
+  .ic-arch  { background: rgba(234,179,8,0.1);  border-color: rgba(234,179,8,0.2); }
+  .ic-data  { background: rgba(34,197,94,0.1);  border-color: rgba(34,197,94,0.2); }
+  .ic-other { background: var(--surface);        border-color: var(--border); }
 
   .file-meta-col { flex: 1; min-width: 0; }
 
@@ -477,24 +368,9 @@ def render_page():
     margin-bottom: 2px;
   }
 
-  .file-sub {
-    font-size: 10px;
-    font-family: var(--mono);
-    color: var(--text-3);
-    display: flex;
-    gap: 6px;
-    align-items: center;
-  }
+  .file-sub { font-size: 10px; font-family: var(--mono); color: var(--text-3); display: flex; gap: 6px; align-items: center; }
 
-  .tag {
-    padding: 1px 5px;
-    border-radius: 2px;
-    font-size: 10px;
-    font-family: var(--mono);
-    font-weight: 500;
-    letter-spacing: 0.3px;
-  }
-
+  .tag { padding: 1px 5px; border-radius: 2px; font-size: 10px; font-family: var(--mono); font-weight: 500; letter-spacing: 0.3px; }
   .tag-img   { background: rgba(239,68,68,0.15);  color: var(--red);    }
   .tag-video { background: rgba(59,130,246,0.15); color: var(--blue);   }
   .tag-audio { background: rgba(234,179,8,0.15);  color: var(--yellow); }
@@ -504,13 +380,7 @@ def render_page():
   .tag-data  { background: rgba(34,197,94,0.15);  color: var(--green);  }
   .tag-other { background: var(--border);          color: var(--text-3); }
 
-  .file-actions {
-    display: flex;
-    gap: 4px;
-    opacity: 0;
-    transition: opacity 0.15s;
-  }
-
+  .file-actions { display: flex; gap: 4px; opacity: 0; transition: opacity 0.15s; }
   .file-item:hover .file-actions { opacity: 1; }
 
   .icon-btn {
@@ -526,17 +396,10 @@ def render_page():
     transition: all 0.15s;
   }
 
-  .icon-btn:hover         { background: var(--blue);    color: #fff; border-color: var(--blue); }
-  .icon-btn.del:hover     { background: var(--red);     color: #fff; border-color: var(--red); }
-  .icon-btn.dl:hover      { background: var(--green);   color: #fff; border-color: var(--green); }
+  .icon-btn:hover     { background: var(--blue);  color: #fff; border-color: var(--blue); }
+  .icon-btn.dl:hover  { background: var(--green); color: #fff; border-color: var(--green); }
 
-  /* ── Grid view ── */
-  .file-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 8px;
-    padding: 8px;
-  }
+  .file-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px,1fr)); gap: 8px; padding: 8px; }
 
   .grid-card {
     background: var(--surface);
@@ -548,7 +411,6 @@ def render_page():
     transition: all 0.15s;
     animation: fadeIn 0.25s ease forwards;
     opacity: 0;
-    position: relative;
   }
 
   .grid-card:hover {
@@ -561,36 +423,15 @@ def render_page():
   @keyframes fadeIn { to { opacity: 1; } }
 
   .grid-icon  { font-size: 30px; margin-bottom: 8px; display: block; }
-  .grid-label {
-    font-size: 11px;
-    font-weight: 500;
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-    margin-bottom: 8px;
-    color: var(--text);
-  }
-
-  .grid-tag { display: inline-block; margin-bottom: 8px; }
-
-  .grid-dl {
-    display: block;
-    opacity: 0;
-    transition: opacity 0.15s;
-  }
+  .grid-label { font-size: 11px; font-weight: 500; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; margin-bottom: 8px; color: var(--text); }
+  .grid-tag   { display: inline-block; margin-bottom: 8px; }
+  .grid-dl    { display: block; opacity: 0; transition: opacity 0.15s; }
   .grid-card:hover .grid-dl { opacity: 1; }
 
-  /* ── Empty state ── */
-  .empty-state {
-    text-align: center;
-    padding: 50px 20px;
-    color: var(--text-3);
-  }
-
+  .empty-state { text-align: center; padding: 50px 20px; color: var(--text-3); }
   .empty-state .e-icon { font-size: 38px; margin-bottom: 10px; opacity: 0.4; display: block; }
   .empty-state p { font-size: 12px; font-family: var(--mono); }
 
-  /* ── Right panel — preview area ── */
   .preview-placeholder {
     flex: 1;
     display: flex;
@@ -604,13 +445,7 @@ def render_page():
   .preview-placeholder .big-icon { font-size: 48px; opacity: 0.25; }
   .preview-placeholder p { font-size: 12px; font-family: var(--mono); }
 
-  .preview-pane {
-    flex: 1;
-    overflow: auto;
-    display: none;
-    flex-direction: column;
-  }
-
+  .preview-pane { flex: 1; overflow: auto; display: none; flex-direction: column; }
   .preview-pane.active { display: flex; }
 
   .preview-header {
@@ -644,13 +479,7 @@ def render_page():
     background: var(--bg);
   }
 
-  .preview-body img, .preview-body video {
-    max-width: 100%;
-    max-height: calc(100vh - 200px);
-    border-radius: var(--radius);
-    border: 1px solid var(--border);
-  }
-
+  .preview-body img, .preview-body video { max-width: 100%; max-height: calc(100vh - 200px); border-radius: var(--radius); border: 1px solid var(--border); }
   .preview-body audio { width: 100%; }
 
   .preview-body pre {
@@ -668,14 +497,8 @@ def render_page():
     overflow: auto;
   }
 
-  .preview-body iframe {
-    width: 100%;
-    height: calc(100vh - 180px);
-    border: none;
-    border-radius: var(--radius);
-  }
+  .preview-body iframe { width: 100%; height: calc(100vh - 180px); border: none; border-radius: var(--radius); }
 
-  /* ── Toast ── */
   #toast-stack {
     position: fixed;
     bottom: 20px;
@@ -703,56 +526,44 @@ def render_page():
   .toast.info    { background: rgba(59,130,246,0.12); border-color: rgba(59,130,246,0.35); color: var(--blue);  }
   .toast.warn    { background: rgba(234,179,8,0.12);  border-color: rgba(234,179,8,0.35);  color: var(--yellow);}
 
-  @keyframes toastSlide {
-    from { opacity: 0; transform: translateX(16px); }
-    to   { opacity: 1; transform: translateX(0); }
-  }
+  @keyframes toastSlide { from{opacity:0;transform:translateX(16px)} to{opacity:1;transform:translateX(0)} }
 </style>
 </head>
-
 <body>
 <div class="app-shell">
 
-  <!-- ── Nav Bar ── -->
   <nav class="navbar">
     <div class="nav-brand">
       <div class="nav-logo">⚡</div>
       FileWave Pro
     </div>
     <div class="nav-sep"></div>
+    <!-- STATUS PILL — updated by JS polling /api/status -->
     <div class="nav-pill offline" id="statusPill">
       <span class="dot"></span>
-      <span id="statusText">OFFLINE</span>
+      <span id="statusText">CHECKING…</span>
     </div>
     <div class="nav-spacer"></div>
-    <div class="nav-info" id="urlDisplay">No server running</div>
+    <div class="nav-info" id="urlDisplay">Connecting…</div>
   </nav>
 
-  <!-- ── Main content ── -->
   <div class="content">
 
-    <!-- ── Left Panel ── -->
     <div class="left-panel">
 
-      <!-- Upload -->
       <div class="upload-area">
         <div class="section-title" style="margin-bottom:10px">
           <span class="icon">📤</span> Upload Files
         </div>
-
         <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
           <span class="drop-icon">📂</span>
           <h3>Drop files here</h3>
           <p>or click to browse your device</p>
           <input type="file" id="fileInput" multiple onchange="uploadFiles(this.files)">
         </div>
-
         <div class="upload-btn-row">
-          <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-            Choose Files
-          </button>
+          <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">Choose Files</button>
         </div>
-
         <div class="progress-wrap" id="progressWrap">
           <div class="progress-row">
             <span id="progressLabel">Uploading…</span>
@@ -764,23 +575,14 @@ def render_page():
         </div>
       </div>
 
-      <!-- Stats strip -->
       <div class="stats-strip">
-        <div class="stat-item">
-          <span class="dot-blue">●</span>
-          <strong id="statCount">0</strong> files
-        </div>
-        <div class="stat-item">
-          <span class="dot-green">●</span>
-          <strong id="statTypes">—</strong> types
-        </div>
+        <div class="stat-item"><span class="dot-blue">●</span><strong id="statCount">0</strong> files</div>
+        <div class="stat-item"><span class="dot-green">●</span><strong id="statTypes">—</strong> types</div>
         <div class="stat-item" id="statFilterWrap" style="display:none">
-          <span class="dot-yellow">◆</span>
-          <strong id="statFiltered">0</strong> shown
+          <span class="dot-yellow">◆</span><strong id="statFiltered">0</strong> shown
         </div>
       </div>
 
-      <!-- Toolbar -->
       <div class="toolbar">
         <div class="search-field">
           <span class="ico">🔍</span>
@@ -797,23 +599,18 @@ def render_page():
         </div>
       </div>
 
-      <!-- File scroll area -->
       <div class="file-scroll" id="fileContainer"></div>
     </div>
 
-    <!-- ── Right Panel (Preview) ── -->
     <div class="right-panel">
-
       <div class="section-head">
         <div class="section-title"><span class="icon">👁</span> Preview</div>
         <button class="btn btn-ghost btn-sm" onclick="closePrev()">Clear</button>
       </div>
-
       <div class="preview-placeholder" id="previewPlaceholder">
         <span class="big-icon">📄</span>
         <p>Select a file to preview</p>
       </div>
-
       <div class="preview-pane" id="previewPane">
         <div class="preview-header">
           <span id="prevIcon" style="font-size:16px">📄</span>
@@ -822,12 +619,10 @@ def render_page():
         </div>
         <div class="preview-body" id="previewBody"></div>
       </div>
-
     </div>
   </div>
 </div>
 
-<!-- Toast stack -->
 <div id="toast-stack"></div>
 
 <script>
@@ -835,7 +630,6 @@ let allFiles = [];
 let currentView = 'list';
 let activeFile  = null;
 
-// ── File type classification ──
 const TYPES = {
   img:   ['png','jpg','jpeg','gif','webp','svg','bmp','ico'],
   video: ['mp4','mov','avi','mkv','webm'],
@@ -846,22 +640,14 @@ const TYPES = {
   data:  ['csv','tsv','sql','db'],
 };
 
-const ICONS = {
-  img:'🖼️', video:'🎬', audio:'🎵', doc:'📄', code:'⚡', arch:'📦', data:'📊', other:'📃'
-};
+const ICONS = { img:'🖼️', video:'🎬', audio:'🎵', doc:'📄', code:'⚡', arch:'📦', data:'📊', other:'📃' };
 
-function getExt(f)  { return f.split('.').pop().toLowerCase(); }
-
-function classify(f) {
-  const e = getExt(f);
-  for (const [k,v] of Object.entries(TYPES)) if (v.includes(e)) return k;
-  return 'other';
-}
-
-function icon(f)    { return ICONS[classify(f)]; }
-function icClass(f) { return 'ic-' + classify(f); }
-function tagClass(f){ return 'tag-' + classify(f); }
-function tagLabel(f){ return getExt(f).toUpperCase(); }
+function getExt(f)   { return f.split('.').pop().toLowerCase(); }
+function classify(f) { const e=getExt(f); for(const [k,v] of Object.entries(TYPES)) if(v.includes(e)) return k; return 'other'; }
+function icon(f)     { return ICONS[classify(f)]; }
+function icClass(f)  { return 'ic-'  + classify(f); }
+function tagClass(f) { return 'tag-' + classify(f); }
+function tagLabel(f) { return getExt(f).toUpperCase(); }
 
 function setView(v) {
   currentView = v;
@@ -870,7 +656,33 @@ function setView(v) {
   renderFiles();
 }
 
-// ── Data loading ──
+// ── SERVER STATUS POLLING  (fixes "offline" bug) ──────────────────────────
+const pill    = document.getElementById('statusPill');
+const pillTxt = document.getElementById('statusText');
+const urlDisp = document.getElementById('urlDisplay');
+
+async function checkStatus() {
+  try {
+    const r = await fetch('/api/status', { cache: 'no-store' });
+    if (r.ok) {
+      const d = await r.json();
+      pill.className = 'nav-pill live';
+      pillTxt.textContent = 'LIVE';
+      urlDisp.textContent = d.url || window.location.host;
+    } else {
+      throw new Error('non-ok');
+    }
+  } catch {
+    pill.className = 'nav-pill offline';
+    pillTxt.textContent = 'OFFLINE';
+    urlDisp.textContent = 'Server unreachable';
+  }
+}
+
+checkStatus();
+setInterval(checkStatus, 5000);  // poll every 5 s
+// ─────────────────────────────────────────────────────────────────────────
+
 async function loadFiles() {
   try {
     const r = await fetch('/api/list');
@@ -884,7 +696,6 @@ function updateStats(filtered) {
   document.getElementById('statCount').textContent = allFiles.length;
   const types = [...new Set(allFiles.map(classify))];
   document.getElementById('statTypes').textContent = types.join(', ') || '—';
-
   const wrap = document.getElementById('statFilterWrap');
   if (filtered.length !== allFiles.length) {
     wrap.style.display = 'flex';
@@ -909,137 +720,99 @@ function renderFiles() {
   else if (sort==='ext')    files.sort((a,b) => classify(a).localeCompare(classify(b)));
 
   if (!files.length) {
-    box.innerHTML = `<div class="empty-state">
-      <span class="e-icon">📭</span><p>No files found</p>
-    </div>`;
+    box.innerHTML = `<div class="empty-state"><span class="e-icon">📭</span><p>No files found</p></div>`;
     return;
   }
 
   if (currentView === 'list') {
-    box.innerHTML = `<div class="file-list">
-      ${files.map((f,i) => `
-        <div class="file-item" style="animation-delay:${i*0.03}s" onclick="preview('${encodeURIComponent(f)}','${f}')">
-          <div class="file-icon ${icClass(f)}">${icon(f)}</div>
-          <div class="file-meta-col">
-            <div class="file-name">${f}</div>
-            <div class="file-sub">
-              <span class="tag ${tagClass(f)}">${tagLabel(f)}</span>
-            </div>
-          </div>
-          <div class="file-actions">
-            <a class="icon-btn dl" href="/files/${encodeURIComponent(f)}" download onclick="event.stopPropagation()" title="Download">⬇</a>
-          </div>
-        </div>`).join('')}
-    </div>`;
+    box.innerHTML = `<div class="file-list">${files.map((f,i) => `
+      <div class="file-item" style="animation-delay:${i*0.03}s" onclick="preview('${encodeURIComponent(f)}','${f}')">
+        <div class="file-icon ${icClass(f)}">${icon(f)}</div>
+        <div class="file-meta-col">
+          <div class="file-name">${f}</div>
+          <div class="file-sub"><span class="tag ${tagClass(f)}">${tagLabel(f)}</span></div>
+        </div>
+        <div class="file-actions">
+          <a class="icon-btn dl" href="/files/${encodeURIComponent(f)}" download onclick="event.stopPropagation()" title="Download">⬇</a>
+        </div>
+      </div>`).join('')}</div>`;
   } else {
-    box.innerHTML = `<div class="file-grid">
-      ${files.map((f,i) => `
-        <div class="grid-card" style="animation-delay:${i*0.03}s" onclick="preview('${encodeURIComponent(f)}','${f}')">
-          <span class="grid-icon">${icon(f)}</span>
-          <div class="grid-label">${f}</div>
-          <span class="tag ${tagClass(f)} grid-tag">${tagLabel(f)}</span>
-          <a class="icon-btn dl grid-dl" href="/files/${encodeURIComponent(f)}" download onclick="event.stopPropagation()" title="Download">⬇</a>
-        </div>`).join('')}
-    </div>`;
+    box.innerHTML = `<div class="file-grid">${files.map((f,i) => `
+      <div class="grid-card" style="animation-delay:${i*0.03}s" onclick="preview('${encodeURIComponent(f)}','${f}')">
+        <span class="grid-icon">${icon(f)}</span>
+        <div class="grid-label">${f}</div>
+        <span class="tag ${tagClass(f)} grid-tag">${tagLabel(f)}</span>
+        <a class="icon-btn dl grid-dl" href="/files/${encodeURIComponent(f)}" download onclick="event.stopPropagation()" title="Download">⬇</a>
+      </div>`).join('')}</div>`;
   }
 }
 
-// ── Upload ──
 function uploadFiles(files) {
-  const wrap  = document.getElementById('progressWrap');
-  const fill  = document.getElementById('progressFill');
-  const label = document.getElementById('progressLabel');
-  const pct   = document.getElementById('progressPct');
-
+  const wrap=document.getElementById('progressWrap'), fill=document.getElementById('progressFill'),
+        label=document.getElementById('progressLabel'), pct=document.getElementById('progressPct');
   wrap.classList.add('active');
-  let total = files.length, done = 0;
-
+  let total=files.length, done=0;
   Array.from(files).forEach(file => {
-    const fd = new FormData();
-    fd.append('file', file);
-    fetch('/api/upload', { method:'POST', body:fd })
-      .then(() => {
-        done++;
-        const p = Math.round((done/total)*100);
-        fill.style.width = p + '%';
-        pct.textContent  = p + '%';
-        label.textContent = `Uploading ${done} of ${total}…`;
-        if (done === total) {
-          label.textContent = `✓ ${total} file(s) ready`;
-          setTimeout(() => { wrap.classList.remove('active'); fill.style.width='0%'; }, 2000);
-          loadFiles();
-          toast(`${total} file(s) uploaded`, 'success');
-        }
-      })
-      .catch(() => toast('Upload failed', 'error'));
+    const fd=new FormData(); fd.append('file',file);
+    fetch('/api/upload',{method:'POST',body:fd}).then(()=>{
+      done++;
+      const p=Math.round((done/total)*100);
+      fill.style.width=p+'%'; pct.textContent=p+'%';
+      label.textContent=`Uploading ${done} of ${total}…`;
+      if (done===total) {
+        label.textContent=`✓ ${total} file(s) ready`;
+        setTimeout(()=>{ wrap.classList.remove('active'); fill.style.width='0%'; },2000);
+        loadFiles(); toast(`${total} file(s) uploaded`,'success');
+      }
+    }).catch(()=>toast('Upload failed','error'));
   });
 }
 
-// ── Drag & drop ──
-const dz = document.getElementById('dropZone');
-['dragover','dragenter'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.add('drag-over'); }));
-['dragleave','dragend','drop'].forEach(e => dz.addEventListener(e, ev => { ev.preventDefault(); dz.classList.remove('drag-over'); }));
-dz.addEventListener('drop', ev => { ev.preventDefault(); if (ev.dataTransfer.files.length) uploadFiles(ev.dataTransfer.files); });
+const dz=document.getElementById('dropZone');
+['dragover','dragenter'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('drag-over');}));
+['dragleave','dragend','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('drag-over');}));
+dz.addEventListener('drop',ev=>{ev.preventDefault();if(ev.dataTransfer.files.length)uploadFiles(ev.dataTransfer.files);});
 
-// ── Preview ──
 function preview(enc, fname) {
-  activeFile = fname;
-  const ext  = getExt(fname);
-  const url  = `/view/${enc}`;
-  const body = document.getElementById('previewBody');
-
-  document.getElementById('prevName').textContent = fname;
-  document.getElementById('prevIcon').textContent = icon(fname);
-  document.getElementById('prevDownload').href = `/files/${enc}`;
-  document.getElementById('prevDownload').download = fname;
-
-  const type = classify(fname);
-
-  if (type === 'img') {
-    body.innerHTML = `<img src="${url}" alt="${fname}">`;
-  } else if (type === 'video') {
-    body.innerHTML = `<video src="${url}" controls></video>`;
-  } else if (type === 'audio') {
-    body.innerHTML = `<div style="text-align:center;width:100%">
-      <div style="font-size:56px;margin-bottom:24px;opacity:0.5">${icon(fname)}</div>
-      <audio src="${url}" controls style="width:80%"></audio>
-    </div>`;
-  } else if (type === 'code' || ['txt','md','json','xml','csv','yaml','yml'].some(x=>ext===x)) {
-    fetch(url).then(r=>r.text()).then(t=>{
-      body.innerHTML = `<pre>${t.replace(/</g,'&lt;')}</pre>`;
-    });
-  } else if (ext === 'pdf') {
-    body.innerHTML = `<iframe src="${url}"></iframe>`;
-  } else {
-    body.innerHTML = `<div style="text-align:center;color:var(--text-3)">
-      <div style="font-size:56px;margin-bottom:16px;opacity:0.3">${icon(fname)}</div>
-      <p style="font-family:var(--mono);font-size:12px;margin-bottom:16px">No preview available for .${ext.toUpperCase()} files</p>
-      <a class="btn btn-primary" href="/files/${enc}" download>⬇ Download File</a>
-    </div>`;
-  }
-
-  document.getElementById('previewPlaceholder').style.display = 'none';
+  activeFile=fname;
+  const ext=getExt(fname), url=`/view/${enc}`, body=document.getElementById('previewBody');
+  document.getElementById('prevName').textContent=fname;
+  document.getElementById('prevIcon').textContent=icon(fname);
+  document.getElementById('prevDownload').href=`/files/${enc}`;
+  document.getElementById('prevDownload').download=fname;
+  const type=classify(fname);
+  if (type==='img') body.innerHTML=`<img src="${url}" alt="${fname}">`;
+  else if (type==='video') body.innerHTML=`<video src="${url}" controls></video>`;
+  else if (type==='audio') body.innerHTML=`<div style="text-align:center;width:100%">
+    <div style="font-size:56px;margin-bottom:24px;opacity:0.5">${icon(fname)}</div>
+    <audio src="${url}" controls style="width:80%"></audio></div>`;
+  else if (type==='code'||['txt','md','json','xml','csv','yaml','yml'].some(x=>ext===x))
+    fetch(url).then(r=>r.text()).then(t=>{ body.innerHTML=`<pre>${t.replace(/</g,'&lt;')}</pre>`; });
+  else if (ext==='pdf') body.innerHTML=`<iframe src="${url}"></iframe>`;
+  else body.innerHTML=`<div style="text-align:center;color:var(--text-3)">
+    <div style="font-size:56px;margin-bottom:16px;opacity:0.3">${icon(fname)}</div>
+    <p style="font-family:var(--mono);font-size:12px;margin-bottom:16px">No preview for .${ext.toUpperCase()}</p>
+    <a class="btn btn-primary" href="/files/${enc}" download>⬇ Download File</a></div>`;
+  document.getElementById('previewPlaceholder').style.display='none';
   document.getElementById('previewPane').classList.add('active');
 }
 
 function closePrev() {
   document.getElementById('previewPane').classList.remove('active');
-  document.getElementById('previewPlaceholder').style.display = '';
-  document.getElementById('previewBody').innerHTML = '';
-  activeFile = null;
+  document.getElementById('previewPlaceholder').style.display='';
+  document.getElementById('previewBody').innerHTML='';
+  activeFile=null;
 }
 
-document.addEventListener('keydown', e => { if (e.key==='Escape') closePrev(); });
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closePrev();});
 
-// ── Toast ──
-function toast(msg, type='info') {
-  const stack = document.getElementById('toast-stack');
-  const el = document.createElement('div');
-  el.className = `toast ${type}`;
-  const prefix = {success:'✓', error:'✗', info:'ℹ', warn:'⚠'}[type] || '•';
-  el.textContent = `${prefix}  ${msg}`;
+function toast(msg,type='info') {
+  const stack=document.getElementById('toast-stack'),el=document.createElement('div');
+  el.className=`toast ${type}`;
+  const prefix={success:'✓',error:'✗',info:'ℹ',warn:'⚠'}[type]||'•';
+  el.textContent=`${prefix}  ${msg}`;
   stack.appendChild(el);
-  setTimeout(() => el.remove(), 3000);
+  setTimeout(()=>el.remove(),3000);
 }
 
 loadFiles();
@@ -1054,7 +827,7 @@ loadFiles();
 class Handler(http.server.BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
-        pass  # Suppress default logging; we handle it in the GUI
+        pass
 
     def do_GET(self):
         path = urllib.parse.unquote(self.path)
@@ -1064,6 +837,26 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_header("Content-type", "text/html; charset=utf-8")
             self.end_headers()
             self.wfile.write(render_page().encode())
+            return
+
+        # ── NEW: /api/status endpoint — fixes the "offline" bug ──
+        if path == "/api/status":
+            import socket as _s
+            s = _s.socket(_s.AF_INET, _s.SOCK_DGRAM)
+            try:
+                s.connect(("8.8.8.8", 80))
+                ip = s.getsockname()[0]
+            except:
+                ip = "127.0.0.1"
+            finally:
+                s.close()
+            port = int(self.server.server_address[1])
+            payload = json.dumps({"status": "live", "url": f"http://{ip}:{port}"})
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(payload.encode())
             return
 
         if path.startswith("/files/"):
@@ -1079,8 +872,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
             else:
-                self.send_response(404)
-                self.end_headers()
+                self.send_response(404); self.end_headers()
             return
 
         if path.startswith("/view/"):
@@ -1095,14 +887,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
             else:
-                self.send_response(404)
-                self.end_headers()
+                self.send_response(404); self.end_headers()
             return
 
         if path == "/api/list":
             try:
-                files = [f for f in os.listdir(os.getcwd())
-                         if os.path.isfile(os.path.join(os.getcwd(), f))]
+                files = [f for f in os.listdir(os.getcwd()) if os.path.isfile(os.path.join(os.getcwd(), f))]
             except:
                 files = []
             self.send_response(200)
@@ -1111,8 +901,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.wfile.write(json.dumps(sorted(files)).encode())
             return
 
-        self.send_response(404)
-        self.end_headers()
+        self.send_response(404); self.end_headers()
 
     def do_POST(self):
         if self.path == "/api/upload":
@@ -1121,7 +910,6 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 body = self.rfile.read(length)
                 boundary = self.headers["Content-Type"].split("boundary=")[-1].encode()
                 parts = body.split(b"--" + boundary)
-
                 for part in parts:
                     if b'filename="' in part:
                         fname = part.split(b'filename="')[1].split(b'"')[0].decode()
@@ -1132,10 +920,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
                             fpath = os.path.join(os.getcwd(), f"{base}_copy{ext}")
                         with open(fpath, "wb") as f:
                             f.write(fdata)
-                        log_queue.append(f"✅ Uploaded: {fname}")
+                        log_queue.append(("success", f"Uploaded: {fname}"))
             except Exception as e:
-                log_queue.append(f"❌ Upload error: {e}")
-
+                log_queue.append(("error", f"Upload error: {e}"))
             self.send_response(200)
             self.send_header("Content-Type", "application/json")
             self.end_headers()
@@ -1157,52 +944,65 @@ def get_ip():
 
 
 # ─────────────────────────────────────────────
-# TKINTER GUI  — Professional dark theme
-# Matches the web UI colour system exactly:
-#   Blue   = actions / primary buttons
-#   Green  = live / success
-#   Red    = stop / error
-#   Yellow = warning / info
+# CANVA-STYLE TKINTER GUI
+# Clean · Light · Professional
+#
+# Palette:
+#   White     #FFFFFF  — canvas / card background
+#   Snow      #F5F5F5  — app background
+#   Lavender  #F0EDFF  — subtle accent tints
+#   Purple    #7C3AED  — primary action (Canva brand-adjacent)
+#   Purple-L  #9D6FF5  — hover / lighter shade
+#   Purple-XL #EDE9FE  — ghost tints
+#   Ink       #1A1A2E  — primary text
+#   Slate     #6B7280  — secondary text
+#   Cloud     #E5E7EB  — borders
+#   Red       #EF4444  — stop / danger
+#   Green     #10B981  — success / live
+#   Amber     #F59E0B  — warning
 # ─────────────────────────────────────────────
 class App(tk.Tk):
 
-    # ── Colour palette (mirrors CSS variables) ──
-    BG      = "#111318"   # --bg
-    SURFACE = "#1a1d24"   # --surface
-    PANEL   = "#1f2330"   # --panel  (navbar / card headers)
-    BORDER  = "#2c3040"   # --border
-    BORDER2 = "#353a4d"   # --border2
+    # ── Palette ──────────────────────────────
+    BG       = "#F7F7FB"   # app background (off-white)
+    WHITE    = "#FFFFFF"   # card / panel background
+    LAVENDER = "#F0EDFF"   # tinted accent bg
+    BORDER   = "#E5E7EB"   # subtle border
+    BORDER2  = "#D1D5DB"   # slightly stronger border
 
-    BLUE    = "#3b82f6"   # actions, primary buttons, links
-    GREEN   = "#22c55e"   # live status, success log lines
-    RED     = "#ef4444"   # stop button, error log lines
-    YELLOW  = "#eab308"   # warnings
+    PURPLE   = "#7C3AED"   # primary / Canva-purple
+    PURPLE_L = "#9D6FF5"   # hover
+    PURPLE_T = "#EDE9FE"   # tinted ghost bg
+    PURPLE_D = "#6D28D9"   # active / pressed
 
-    TEXT    = "#e2e5ef"   # primary text
-    TEXT2   = "#9099b5"   # secondary / labels
-    TEXT3   = "#5c6380"   # muted / placeholders
+    INK      = "#1A1A2E"   # primary text
+    SLATE    = "#6B7280"   # secondary text
+    MIST     = "#9CA3AF"   # placeholder / muted
 
-    # Derived hover shades
-    BLUE_H  = "#2563eb"
-    GREEN_H = "#16a34a"
-    RED_H   = "#dc2626"
+    GREEN    = "#10B981"   # live / success
+    GREEN_T  = "#D1FAE5"   # green tint
+    RED      = "#EF4444"   # stop / danger
+    RED_T    = "#FEE2E2"   # red tint
+    AMBER    = "#F59E0B"   # warning
+    AMBER_T  = "#FEF3C7"   # amber tint
 
     def __init__(self):
         super().__init__()
         self.title("FileWave Pro")
-        self.geometry("860x580")
-        self.minsize(760, 500)
+        self.geometry("900x600")
+        self.minsize(800, 520)
         self.configure(bg=self.BG)
         self.resizable(True, True)
 
         self._server_obj = None
         self._running    = False
         self._log_after  = None
+        self._dot_anim   = False
 
         self._build_ui()
         self._poll_logs()
 
-    # ─── Low-level widget helpers ─────────────
+    # ── Widget helpers ────────────────────────
 
     def _frame(self, parent, bg=None, **kw):
         return tk.Frame(parent, bg=bg or self.BG, **kw)
@@ -1210,278 +1010,355 @@ class App(tk.Tk):
     def _label(self, parent, text, font=None, fg=None, bg=None, **kw):
         return tk.Label(parent,
             text=text,
-            font=font or ("Courier", 10),
-            fg=fg or self.TEXT2,
+            font=font or ("Helvetica", 10),
+            fg=fg or self.SLATE,
             bg=bg or self.BG,
             **kw)
 
     def _entry(self, parent, textvariable, width=None, **kw):
         e = tk.Entry(parent,
             textvariable=textvariable,
-            bg=self.SURFACE,
-            fg=self.TEXT,
-            insertbackground=self.TEXT,
+            bg=self.WHITE,
+            fg=self.INK,
+            insertbackground=self.PURPLE,
             relief="flat",
-            font=("Courier", 11),
+            font=("Helvetica", 11),
             highlightthickness=1,
-            highlightbackground=self.BORDER2,
-            highlightcolor=self.BLUE,
+            highlightbackground=self.BORDER,
+            highlightcolor=self.PURPLE,
             **({} if width is None else {"width": width}),
             **kw)
         return e
 
-    def _btn(self, parent, text, cmd, bg, fg="#ffffff",
-             hover=None, padx=14, pady=6, font_size=10):
-        """Flat button with hover colour shift."""
-        _hover = hover or self._darken(bg, 20)
+    def _btn(self, parent, text, cmd, bg=None, fg="#FFFFFF",
+             hover=None, padx=16, pady=8):
+        bg    = bg    or self.PURPLE
+        hover = hover or self.PURPLE_L
         b = tk.Button(parent,
             text=text, command=cmd,
             bg=bg, fg=fg,
-            activebackground=_hover, activeforeground=fg,
+            activebackground=hover, activeforeground=fg,
             relief="flat", bd=0, cursor="hand2",
-            font=("Helvetica", font_size, "bold"),
+            font=("Helvetica", 10, "bold"),
             padx=padx, pady=pady)
-        b.bind("<Enter>", lambda e, h=_hover: b.config(bg=h))
-        b.bind("<Leave>", lambda e, c=bg:     b.config(bg=c))
+        b.bind("<Enter>", lambda e, h=hover: b.config(bg=h))
+        b.bind("<Leave>", lambda e, c=bg:    b.config(bg=c))
         return b
 
     def _ghost_btn(self, parent, text, cmd, fg=None, font_size=10):
-        """Border-style ghost button."""
-        fg = fg or self.TEXT2
+        fg = fg or self.PURPLE
         b = tk.Button(parent,
             text=text, command=cmd,
-            bg=self.SURFACE, fg=fg,
-            activebackground=self.PANEL, activeforeground=fg,
+            bg=self.WHITE, fg=fg,
+            activebackground=self.PURPLE_T, activeforeground=fg,
             relief="flat", bd=0, cursor="hand2",
             font=("Helvetica", font_size),
-            padx=12, pady=6,
+            padx=12, pady=7,
             highlightthickness=1,
-            highlightbackground=self.BORDER2,
-            highlightcolor=self.BLUE)
-        b.bind("<Enter>", lambda e: b.config(bg=self.PANEL))
-        b.bind("<Leave>", lambda e: b.config(bg=self.SURFACE))
+            highlightbackground=self.BORDER,
+            highlightcolor=self.PURPLE)
+        b.bind("<Enter>", lambda e: b.config(bg=self.PURPLE_T))
+        b.bind("<Leave>", lambda e: b.config(bg=self.WHITE))
         return b
 
-    @staticmethod
-    def _darken(hex_color, amount=20):
-        r = max(0, int(hex_color[1:3], 16) - amount)
-        g = max(0, int(hex_color[3:5], 16) - amount)
-        b = max(0, int(hex_color[5:7], 16) - amount)
-        return f"#{r:02x}{g:02x}{b:02x}"
+    def _divider(self, parent, orient="h", color=None, **kw):
+        color = color or self.BORDER
+        if orient == "h":
+            return tk.Frame(parent, bg=color, height=1, **kw)
+        return tk.Frame(parent, bg=color, width=1, **kw)
 
-    # ─── Section header ───────────────────────
+    # ── Pill / badge ──────────────────────────
 
-    def _section_head(self, parent, title, bg=None):
-        bg = bg or self.PANEL
-        row = self._frame(parent, bg=bg)
-        row.pack(fill="x", pady=(0, 0))
-        # Accent bar
-        tk.Frame(row, bg=self.BLUE, width=3).pack(side="left", fill="y")
-        self._label(row, f"  {title}",
-            font=("Courier", 9, "bold"),
-            fg=self.TEXT3, bg=bg).pack(side="left", pady=8)
-        tk.Frame(row, bg=self.BORDER, height=1).pack(
-            side="left", fill="x", expand=True, padx=(10, 0))
+    def _pill(self, parent, text, bg, fg, font_size=9):
+        f = tk.Frame(parent, bg=bg, padx=8, pady=3)
+        tk.Label(f, text=text, font=("Helvetica", font_size, "bold"),
+                 bg=bg, fg=fg).pack()
+        return f
 
-    # ─── Card wrapper ─────────────────────────
+    # ── Card container ────────────────────────
 
-    def _card(self, parent, title, pady_bottom=10):
-        outer = self._frame(parent, bg=self.BORDER)   # 1-px border illusion
-        outer.pack(fill="x", padx=16, pady=(0, pady_bottom))
-        inner = self._frame(outer, bg=self.PANEL)
-        inner.pack(fill="both", expand=True, padx=1, pady=1)
-        self._section_head(inner, title, bg=self.PANEL)
-        body = self._frame(inner, bg=self.PANEL)
-        body.pack(fill="both", expand=True, padx=14, pady=(8, 12))
-        return body
+    def _card(self, parent, padx=0, pady=0):
+        """White rounded-feel card with a subtle border."""
+        outer = tk.Frame(parent, bg=self.BORDER, padx=1, pady=1)
+        outer.pack(fill="x", padx=padx, pady=pady)
+        inner = tk.Frame(outer, bg=self.WHITE)
+        inner.pack(fill="both", expand=True)
+        return inner
 
-    # ─── Main UI build ────────────────────────
+    # ── Section label ─────────────────────────
+
+    def _section_lbl(self, parent, text, bg=None):
+        bg = bg or self.BG
+        f  = self._frame(parent, bg=bg)
+        f.pack(fill="x", pady=(0, 6))
+        self._label(f, text,
+            font=("Helvetica", 9, "bold"),
+            fg=self.MIST, bg=bg).pack(side="left")
+        return f
+
+    # ─────────────────────────────────────────
+    # BUILD UI
+    # ─────────────────────────────────────────
 
     def _build_ui(self):
         self._build_navbar()
         self._build_body()
         self._build_statusbar()
 
-    # ── Navbar ──
+    # ── Navbar ────────────────────────────────
+
     def _build_navbar(self):
-        nav = tk.Frame(self, bg=self.PANEL, height=46)
+        nav = tk.Frame(self, bg=self.WHITE, height=52)
         nav.pack(fill="x")
         nav.pack_propagate(False)
 
-        # Logo block
-        logo_bg = tk.Frame(nav, bg=self.BLUE, width=46, height=46)
-        logo_bg.pack(side="left")
-        logo_bg.pack_propagate(False)
-        tk.Label(logo_bg, text="⚡", font=("Helvetica", 18, "bold"),
-                 bg=self.BLUE, fg="#fff").place(relx=0.5, rely=0.5, anchor="center")
+        self._divider(nav, "h", color=self.BORDER).pack(side="bottom", fill="x")
 
-        # Separator
-        tk.Frame(nav, bg=self.BORDER, width=1).pack(side="left", fill="y", pady=10)
+        # Left: logo + name
+        left = tk.Frame(nav, bg=self.WHITE)
+        left.pack(side="left", padx=20, pady=0)
 
-        # Title
-        tk.Label(nav, text="FileWave Pro",
+        logo = tk.Frame(left, bg=self.PURPLE, width=30, height=30)
+        logo.pack(side="left")
+        logo.pack_propagate(False)
+        tk.Label(logo, text="⚡", font=("Helvetica", 14, "bold"),
+                 bg=self.PURPLE, fg=self.WHITE).place(relx=.5, rely=.5, anchor="center")
+
+        tk.Label(left, text="  FileWave Pro",
                  font=("Helvetica", 14, "bold"),
-                 bg=self.PANEL, fg=self.TEXT).pack(side="left", padx=14)
+                 bg=self.WHITE, fg=self.INK).pack(side="left")
 
-        tk.Label(nav, text="LOCAL FILE SERVER",
-                 font=("Courier", 8),
-                 bg=self.PANEL, fg=self.TEXT3).pack(side="left")
+        tk.Label(left, text="  LOCAL FILE SERVER",
+                 font=("Helvetica", 8),
+                 bg=self.WHITE, fg=self.MIST).pack(side="left", pady=(4, 0))
 
-        # Status pill (right side)
-        pill_frame = tk.Frame(nav, bg=self.PANEL)
-        pill_frame.pack(side="right", padx=16)
+        # Right: status pill
+        right = tk.Frame(nav, bg=self.WHITE)
+        right.pack(side="right", padx=20)
 
-        self._pill_dot = tk.Label(pill_frame, text="●",
-            font=("Courier", 10), bg=self.PANEL, fg=self.RED)
-        self._pill_dot.pack(side="left")
+        self._status_frame = tk.Frame(right, bg=self.RED_T,
+                                      padx=10, pady=4)
+        self._status_frame.pack(side="right")
 
-        self._pill_txt = tk.Label(pill_frame, text=" OFFLINE",
-            font=("Courier", 9, "bold"), bg=self.PANEL, fg=self.RED)
-        self._pill_txt.pack(side="left")
+        self._status_dot = tk.Label(self._status_frame, text="●",
+            font=("Helvetica", 8), bg=self.RED_T, fg=self.RED)
+        self._status_dot.pack(side="left")
 
-    # ── Two-column body ──
+        self._status_lbl = tk.Label(self._status_frame, text=" OFFLINE",
+            font=("Helvetica", 9, "bold"), bg=self.RED_T, fg=self.RED)
+        self._status_lbl.pack(side="left")
+
+    # ── Two-column body ───────────────────────
+
     def _build_body(self):
-        body = self._frame(self, bg=self.BG)
+        body = tk.Frame(self, bg=self.BG)
         body.pack(fill="both", expand=True)
-        body.columnconfigure(0, weight=0, minsize=340)
+        body.columnconfigure(0, weight=0, minsize=360)
         body.columnconfigure(1, weight=1)
         body.rowconfigure(0, weight=1)
 
-        left  = self._frame(body, bg=self.BG)
-        right = self._frame(body, bg=self.BG)
+        left  = tk.Frame(body, bg=self.WHITE)
+        right = tk.Frame(body, bg=self.BG)
         left.grid(row=0, column=0, sticky="nsew")
         right.grid(row=0, column=1, sticky="nsew")
-
-        # Vertical divider
-        tk.Frame(body, bg=self.BORDER, width=1).grid(
-            row=0, column=0, sticky="nse")
+        self._divider(body, "v").grid(row=0, column=0, sticky="nse")
 
         self._build_left(left)
         self._build_right(right)
 
-    # ── Left panel: config + controls ──
+    # ── LEFT PANEL ────────────────────────────
+
     def _build_left(self, parent):
-        parent.pack_propagate(True)
-        top_pad = self._frame(parent, bg=self.BG)
-        top_pad.pack(fill="both", expand=True, pady=(14, 14))
+        # Scrollable area via inner frame
+        canvas = tk.Canvas(parent, bg=self.WHITE, highlightthickness=0)
+        canvas.pack(fill="both", expand=True)
 
-        # ── Configuration card ──
-        cf = self._card(top_pad, "CONFIGURATION")
+        inner = tk.Frame(canvas, bg=self.WHITE)
+        canvas.create_window((0, 0), window=inner, anchor="nw")
+        inner.bind("<Configure>", lambda e: canvas.configure(
+            scrollregion=canvas.bbox("all")))
 
-        # Folder row
-        r1 = self._frame(cf, bg=self.PANEL)
-        r1.pack(fill="x", pady=(0, 8))
-        self._label(r1, "Folder", fg=self.TEXT3, bg=self.PANEL,
-                    font=("Courier", 9, "bold"), width=7, anchor="w").pack(side="left")
+        self._build_left_inner(inner)
+
+    def _build_left_inner(self, p):
+        pad = dict(padx=20)
+
+        # ── App hero strip ──
+        hero = tk.Frame(p, bg=self.LAVENDER)
+        hero.pack(fill="x")
+        tk.Label(hero, text="Your local file server",
+                 font=("Helvetica", 11), bg=self.LAVENDER,
+                 fg=self.PURPLE).pack(side="left", padx=20, pady=12)
+
+        # ── SECTION: Folder ──
+        tk.Frame(p, bg=self.BG, height=16).pack(fill="x")
+        self._section_lbl(p, "  SERVE FOLDER", bg=self.WHITE).pack(
+            **pad, fill="x")
+
+        row1 = tk.Frame(p, bg=self.WHITE)
+        row1.pack(fill="x", **pad, pady=(0, 10))
+
         self.folder_var = tk.StringVar(value=str(Path.cwd()))
-        self._entry(r1, self.folder_var).pack(
-            side="left", fill="x", expand=True, padx=(6, 6))
-        self._ghost_btn(r1, "Browse", self._browse, fg=self.TEXT2).pack(side="left")
+        entry = self._entry(row1, self.folder_var)
+        entry.pack(side="left", fill="x", expand=True, padx=(0, 8))
 
-        # Port row
-        r2 = self._frame(cf, bg=self.PANEL)
-        r2.pack(fill="x")
-        self._label(r2, "Port", fg=self.TEXT3, bg=self.PANEL,
-                    font=("Courier", 9, "bold"), width=7, anchor="w").pack(side="left")
+        self._ghost_btn(row1, "Browse", self._browse).pack(side="left")
+
+        # ── SECTION: Port ──
+        self._section_lbl(p, "  PORT", bg=self.WHITE).pack(**pad, fill="x")
+
+        row2 = tk.Frame(p, bg=self.WHITE)
+        row2.pack(fill="x", **pad, pady=(0, 4))
         self.port_var = tk.StringVar(value="8000")
-        self._entry(r2, self.port_var, width=10).pack(side="left", padx=(6, 0))
+        self._entry(row2, self.port_var, width=10).pack(side="left")
+        self._label(row2, "   Default: 8000", fg=self.MIST,
+                    bg=self.WHITE, font=("Helvetica", 9)).pack(side="left")
 
-        # ── Server Control card ──
-        ctrl = self._card(top_pad, "SERVER CONTROL")
+        self._divider(p).pack(fill="x", **pad, pady=16)
 
-        btn_row = self._frame(ctrl, bg=self.PANEL)
-        btn_row.pack(fill="x", pady=(0, 10))
+        # ── SECTION: Controls ──
+        self._section_lbl(p, "  SERVER CONTROL", bg=self.WHITE).pack(
+            **pad, fill="x")
 
-        self._btn(btn_row, "▶  Start", self._start,
-                  bg=self.BLUE, hover=self.BLUE_H).pack(side="left", padx=(0, 6))
-        self._btn(btn_row, "■  Stop", self._stop,
-                  bg=self.RED,  hover=self.RED_H).pack(side="left", padx=(0, 6))
-        self._ghost_btn(btn_row, "⬡  Open Browser",
-                        self._open_browser, fg=self.BLUE).pack(side="left")
+        btns = tk.Frame(p, bg=self.WHITE)
+        btns.pack(fill="x", **pad, pady=(0, 4))
 
-        # ── Connection info ──
-        conn = self._card(top_pad, "CONNECTION")
+        self._btn(btns, "▶  Start Server", self._start,
+                  bg=self.PURPLE, hover=self.PURPLE_L).pack(
+                  side="left", padx=(0, 8))
 
-        self.local_var = tk.StringVar(value="—")
-        self.net_var   = tk.StringVar(value="—")
+        self._btn(btns, "■  Stop", self._stop,
+                  bg=self.RED, fg=self.WHITE, hover="#DC2626").pack(
+                  side="left", padx=(0, 8))
 
-        for icon, label, var in [
-            ("⬡", "Local   ", self.local_var),
-            ("⬡", "Network ", self.net_var),
+        self._ghost_btn(btns, "🌐  Open Browser",
+                        self._open_browser).pack(side="left")
+
+        self._divider(p).pack(fill="x", **pad, pady=16)
+
+        # ── SECTION: Connection URLs ──
+        self._section_lbl(p, "  CONNECTION DETAILS", bg=self.WHITE).pack(
+            **pad, fill="x")
+
+        conn = tk.Frame(p, bg=self.WHITE)
+        conn.pack(fill="x", **pad, pady=(0, 4))
+
+        self.local_var = tk.StringVar(value="Not running")
+        self.net_var   = tk.StringVar(value="Not running")
+
+        for label, var, icon in [
+            ("Local", self.local_var, "🖥"),
+            ("Network", self.net_var, "🌐"),
         ]:
-            row = self._frame(conn, bg=self.PANEL)
-            row.pack(fill="x", pady=2)
-            self._label(row, label, fg=self.TEXT3, bg=self.PANEL,
-                        font=("Courier", 9), width=9, anchor="w").pack(side="left")
-            tk.Label(row, textvariable=var,
-                     font=("Courier", 10, "bold"),
-                     bg=self.PANEL, fg=self.GREEN,
-                     cursor="hand2").pack(side="left")
+            row = tk.Frame(conn, bg=self.WHITE)
+            row.pack(fill="x", pady=4)
 
-    # ── Right panel: activity log ──
+            # Icon badge
+            badge = tk.Frame(row, bg=self.PURPLE_T, padx=6, pady=4)
+            badge.pack(side="left")
+            tk.Label(badge, text=icon, bg=self.PURPLE_T,
+                     font=("Helvetica", 11)).pack()
+
+            info = tk.Frame(row, bg=self.WHITE)
+            info.pack(side="left", padx=10)
+
+            tk.Label(info, text=label,
+                     font=("Helvetica", 8, "bold"),
+                     bg=self.WHITE, fg=self.MIST).pack(anchor="w")
+
+            tk.Label(info, textvariable=var,
+                     font=("Helvetica", 10, "bold"),
+                     bg=self.WHITE, fg=self.PURPLE,
+                     cursor="hand2").pack(anchor="w")
+
+        self._divider(p).pack(fill="x", **pad, pady=16)
+
+        # ── SECTION: Quick tip ──
+        tip = tk.Frame(p, bg=self.AMBER_T, padx=14, pady=12)
+        tip.pack(fill="x", **pad, pady=(0, 20))
+        tk.Label(tip, text="💡  Tip",
+                 font=("Helvetica", 9, "bold"),
+                 bg=self.AMBER_T, fg=self.AMBER).pack(anchor="w")
+        tk.Label(tip,
+                 text="Share your Network URL with\ndevices on the same Wi-Fi.",
+                 font=("Helvetica", 9),
+                 bg=self.AMBER_T, fg=self.INK,
+                 justify="left").pack(anchor="w", pady=(4, 0))
+
+    # ── RIGHT PANEL: Activity log ─────────────
+
     def _build_right(self, parent):
-        header = self._frame(parent, bg=self.PANEL)
+
+        # Header bar
+        header = tk.Frame(parent, bg=self.WHITE, height=44)
         header.pack(fill="x")
+        header.pack_propagate(False)
+        self._divider(header).pack(side="bottom", fill="x")
 
-        # Section header with blue accent
-        tk.Frame(header, bg=self.BLUE, width=3).pack(side="left", fill="y")
-        self._label(header, "  ACTIVITY LOG",
-            font=("Courier", 9, "bold"),
-            fg=self.TEXT3, bg=self.PANEL).pack(side="left", pady=10)
+        tk.Label(header, text="  Activity Log",
+                 font=("Helvetica", 12, "bold"),
+                 bg=self.WHITE, fg=self.INK).pack(side="left", padx=16, pady=10)
 
-        # Clear button
         self._ghost_btn(header, "Clear", self._clear_log,
-                        fg=self.TEXT3, font_size=9).pack(side="right", padx=10, pady=6)
+                        fg=self.SLATE, font_size=9).pack(
+                        side="right", padx=12, pady=8)
 
-        # Log text widget
-        log_wrap = self._frame(parent, bg=self.BORDER)
-        log_wrap.pack(fill="both", expand=True, padx=1, pady=1)
+        # Log area
+        log_bg = tk.Frame(parent, bg=self.BG)
+        log_bg.pack(fill="both", expand=True, padx=16, pady=12)
 
-        self.log_box = tk.Text(log_wrap,
-            bg=self.SURFACE,
-            fg=self.TEXT2,
-            insertbackground=self.TEXT,
+        log_card = tk.Frame(log_bg, bg=self.BORDER, padx=1, pady=1)
+        log_card.pack(fill="both", expand=True)
+
+        inner = tk.Frame(log_card, bg=self.WHITE)
+        inner.pack(fill="both", expand=True)
+
+        self.log_box = tk.Text(inner,
+            bg=self.WHITE,
+            fg=self.INK,
+            insertbackground=self.PURPLE,
             font=("Courier", 10),
             relief="flat",
             state="disabled",
             wrap="word",
-            padx=12, pady=10,
-            selectbackground=self.BORDER2,
-            selectforeground=self.TEXT,
+            padx=14, pady=12,
+            selectbackground=self.PURPLE_T,
+            selectforeground=self.INK,
             cursor="arrow",
+            spacing1=2, spacing3=2,
         )
         self.log_box.pack(side="left", fill="both", expand=True)
 
-        sb = tk.Scrollbar(log_wrap, command=self.log_box.yview,
-                          bg=self.SURFACE, troughcolor=self.SURFACE,
+        sb = tk.Scrollbar(inner, command=self.log_box.yview,
+                          bg=self.BG, troughcolor=self.BG,
                           relief="flat", bd=0, width=8)
         sb.pack(side="right", fill="y")
         self.log_box.configure(yscrollcommand=sb.set)
 
-        # Colour tags for semantic log lines
-        self.log_box.tag_config("ts",      foreground=self.TEXT3)
+        # Semantic colour tags
+        self.log_box.tag_config("ts",      foreground=self.MIST)
         self.log_box.tag_config("success", foreground=self.GREEN)
         self.log_box.tag_config("error",   foreground=self.RED)
-        self.log_box.tag_config("warn",    foreground=self.YELLOW)
-        self.log_box.tag_config("info",    foreground=self.BLUE)
-        self.log_box.tag_config("muted",   foreground=self.TEXT3)
+        self.log_box.tag_config("warn",    foreground=self.AMBER)
+        self.log_box.tag_config("info",    foreground=self.PURPLE)
+        self.log_box.tag_config("muted",   foreground=self.SLATE)
 
         self._log("FileWave Pro ready — choose a folder and start the server.", "muted")
 
-    # ── Status bar ──
+    # ── Status bar ────────────────────────────
+
     def _build_statusbar(self):
-        bar = tk.Frame(self, bg=self.PANEL, height=26)
+        bar = tk.Frame(self, bg=self.WHITE, height=28)
         bar.pack(fill="x", side="bottom")
         bar.pack_propagate(False)
-
-        tk.Frame(bar, bg=self.BORDER, height=1).pack(fill="x", side="top")
+        self._divider(bar).pack(side="top", fill="x")
 
         self._sb_left = tk.Label(bar, text="  No server running",
-            font=("Courier", 9), bg=self.PANEL, fg=self.TEXT3, anchor="w")
-        self._sb_left.pack(side="left", fill="x", expand=True)
+            font=("Helvetica", 9), bg=self.WHITE, fg=self.MIST, anchor="w")
+        self._sb_left.pack(side="left", fill="x", expand=True, padx=4)
 
         tk.Label(bar, text="FileWave Pro  ",
-            font=("Courier", 9), bg=self.PANEL, fg=self.TEXT3).pack(side="right")
+            font=("Helvetica", 9), bg=self.WHITE, fg=self.MIST).pack(side="right")
 
     # ─── Actions ──────────────────────────────
 
@@ -1489,21 +1366,18 @@ class App(tk.Tk):
         p = filedialog.askdirectory()
         if p:
             self.folder_var.set(p)
-            self._log(f"Folder set → {p}", "info")
+            self._log(f"Folder → {p}", "info")
 
     def _start(self):
         if self._running:
-            self._log("Server is already running.", "warn")
-            return
+            self._log("Server is already running.", "warn"); return
         folder = self.folder_var.get()
         if not os.path.isdir(folder):
-            self._log("Invalid folder path.", "error")
-            return
+            self._log("Invalid folder path.", "error"); return
         try:
             port = int(self.port_var.get())
         except ValueError:
-            self._log("Invalid port number.", "error")
-            return
+            self._log("Invalid port number.", "error"); return
 
         os.chdir(folder)
         self._running = True
@@ -1515,13 +1389,10 @@ class App(tk.Tk):
                     ip        = get_ip()
                     local_url = f"http://127.0.0.1:{port}"
                     net_url   = f"http://{ip}:{port}"
-
                     self.local_var.set(local_url)
                     self.net_var.set(net_url)
-                    self._pill_dot.config(fg=self.GREEN)
-                    self._pill_txt.config(fg=self.GREEN, text=" LIVE")
-                    self._sb_left.config(
-                        text=f"  Serving  {folder}  →  {net_url}")
+                    self._set_live(True)
+                    self._sb_left.config(text=f"  Serving  {folder}  →  {net_url}")
                     log_queue.append(("success", f"Server started on port {port}"))
                     log_queue.append(("info",    f"Local   → {local_url}"))
                     log_queue.append(("info",    f"Network → {net_url}"))
@@ -1529,6 +1400,7 @@ class App(tk.Tk):
             except Exception as e:
                 log_queue.append(("error", f"Error: {e}"))
                 self._running = False
+                self._set_live(False)
 
         threading.Thread(target=run, daemon=True).start()
 
@@ -1537,10 +1409,9 @@ class App(tk.Tk):
             self._server_obj.shutdown()
             self._server_obj = None
             self._running = False
-            self.local_var.set("—")
-            self.net_var.set("—")
-            self._pill_dot.config(fg=self.RED)
-            self._pill_txt.config(fg=self.RED, text=" OFFLINE")
+            self.local_var.set("Not running")
+            self.net_var.set("Not running")
+            self._set_live(False)
             self._sb_left.config(text="  No server running")
             self._log("Server stopped.", "warn")
         else:
@@ -1548,7 +1419,7 @@ class App(tk.Tk):
 
     def _open_browser(self):
         url = self.net_var.get()
-        if url and url != "—":
+        if url and url != "Not running":
             webbrowser.open(url)
             self._log(f"Opened browser → {url}", "info")
         else:
@@ -1559,33 +1430,45 @@ class App(tk.Tk):
         self.log_box.delete("1.0", "end")
         self.log_box.config(state="disabled")
 
+    # ── Live / offline pill ───────────────────
+
+    def _set_live(self, live):
+        if live:
+            self._status_frame.config(bg=self.GREEN_T)
+            self._status_dot.config(bg=self.GREEN_T, fg=self.GREEN)
+            self._status_lbl.config(bg=self.GREEN_T, fg=self.GREEN, text=" LIVE")
+            self._animate_dot()
+        else:
+            self._dot_anim = False
+            self._status_frame.config(bg=self.RED_T)
+            self._status_dot.config(bg=self.RED_T, fg=self.RED)
+            self._status_lbl.config(bg=self.RED_T, fg=self.RED, text=" OFFLINE")
+
+    def _animate_dot(self, visible=True):
+        if not self._running:
+            return
+        self._dot_anim = True
+        self._status_dot.config(fg=self.GREEN if visible else self.GREEN_T)
+        self.after(900, lambda: self._animate_dot(not visible))
+
     # ─── Logging ──────────────────────────────
 
     def _log(self, msg, level="muted"):
-        """
-        level: 'success' (green) | 'error' (red) |
-               'warn' (yellow)   | 'info' (blue)  | 'muted' (grey)
-        """
         ts = time.strftime("%H:%M:%S")
+        icons = {"success": "✓", "error": "✗", "warn": "⚠", "info": "→", "muted": "·"}
+        prefix = icons.get(level, "·")
         self.log_box.config(state="normal")
-
-        # Timestamp
         self.log_box.insert("end", f"[{ts}]  ", "ts")
-        # Message
-        self.log_box.insert("end", f"{msg}\n", level)
-
+        self.log_box.insert("end", f"{prefix}  {msg}\n", level)
         self.log_box.see("end")
         self.log_box.config(state="disabled")
 
     def _poll_logs(self):
         while log_queue:
             entry = log_queue.pop(0)
-            if isinstance(entry, tuple):
-                level, msg = entry
-            else:
-                level, msg = "muted", entry
+            level, msg = entry if isinstance(entry, tuple) else ("muted", entry)
             self._log(msg, level)
-        self._log_after = self.after(300, self._poll_logs)
+        self.after(300, self._poll_logs)
 
 
 # ─────────────────────────────────────────────
