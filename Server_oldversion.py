@@ -9,7 +9,7 @@ from pathlib import Path
 import urllib.parse
 import webbrowser
 
-PORT = 8000
+PORT = 8080
 server = None
 
 # -----------------------------
