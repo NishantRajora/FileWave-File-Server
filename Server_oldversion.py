@@ -5,102 +5,41 @@ import os
 import threading
 import tkinter as tk
 from tkinter import filedialog, scrolledtext
-import webbrowser
 from pathlib import Path
 import urllib.parse
-import json
+import webbrowser
 
 PORT = 8000
 server = None
 
 # -----------------------------
-# HTML PAGE
+# CLIENT PAGE (NO CHANGE)
 # -----------------------------
 def render_page():
-    return """<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>FileWave Pro</title>
+    files = os.listdir(os.getcwd())
 
-<style>
-body{font-family:Arial;background:#0f172a;margin:0;color:white;}
-.top{background:#020617;padding:15px;text-align:center;font-size:22px;}
-.box{max-width:900px;margin:20px auto;background:#1e293b;padding:20px;border-radius:10px;}
+    file_list = ""
+    for f in files:
+        file_list += f'<li><a href="/files/{f}">{f}</a></li>'
 
-.upbox{border:2px dashed #475569;padding:20px;text-align:center;border-radius:10px;}
+    return f"""
+    <html>
+    <body>
+        <h2>FileWaver Basic</h2>
 
-.file{display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #334155;}
+        <h3>Upload File</h3>
+        <form method="POST" enctype="multipart/form-data">
+            <input type="file" name="file">
+            <button type="submit">Upload</button>
+        </form>
 
-.file a{margin-left:10px;color:#38bdf8;text-decoration:none;}
-.file a:hover{text-decoration:underline;}
-</style>
-
-</head>
-
-<body>
-
-<div class="top">🚀 FileWave Pro</div>
-
-<div class="box">
-
-<div class="upbox">
-<h3>📤 Upload Files</h3>
-<input type="file" multiple onchange="uploadFiles(this.files)">
-<progress id="bar" value="0" max="100"></progress>
-<div id="pl"></div>
-</div>
-
-<h3>📁 Files</h3>
-<div id="files"></div>
-
-</div>
-
-<script>
-
-function loadFiles(){
- fetch('/api/list')
- .then(r=>r.json())
- .then(data=>{
-    let html="";
-    data.forEach(f=>{
-        html += `<div class="file">
-            <span>${f}</span>
-            <div>
-                <a href="/view/${f}" target="_blank">👁 View</a>
-                <a href="/files/${f}" download>⬇ Download</a>
-            </div>
-        </div>`;
-    });
-    document.getElementById("files").innerHTML = html;
- });
-}
-
-function uploadFiles(files){
- let total = files.length;
- let done = 0;
-
- Array.from(files).forEach(file=>{
-    let fd = new FormData();
-    fd.append("file", file);
-
-    fetch('/api/upload',{method:'POST',body:fd})
-    .then(()=>{
-        done++;
-        document.getElementById("bar").value = (done/total)*100;
-        document.getElementById("pl").innerText = done+"/"+total+" uploaded";
-
-        if(done===total) setTimeout(loadFiles,500);
-    });
- });
-}
-
-loadFiles();
-</script>
-
-</body>
-</html>
-"""
+        <h3>Files</h3>
+        <ul>
+            {file_list}
+        </ul>
+    </body>
+    </html>
+    """
 
 # -----------------------------
 # HANDLER
@@ -123,77 +62,38 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
             if os.path.exists(filepath):
                 with open(filepath, "rb") as f:
-                    data = f.read()
-
-                self.send_response(200)
-                self.send_header("Content-Disposition",
-                                 f'attachment; filename="{filename}"')
-                self.end_headers()
-                self.wfile.write(data)
-            return
-
-        # FILE PREVIEW
-        if path.startswith("/view/"):
-            filename = path.replace("/view/", "")
-            filepath = os.path.join(os.getcwd(), filename)
-
-            if os.path.exists(filepath):
-                self.send_response(200)
-
-                if filename.endswith((".png",".jpg",".jpeg",".gif")):
-                    self.send_header("Content-Type","image/jpeg")
-                elif filename.endswith(".mp4"):
-                    self.send_header("Content-Type","video/mp4")
-                elif filename.endswith(".mp3"):
-                    self.send_header("Content-Type","audio/mpeg")
-                elif filename.endswith(".pdf"):
-                    self.send_header("Content-Type","application/pdf")
-                elif filename.endswith((".txt",".py",".js",".html",".css")):
-                    self.send_header("Content-Type","text/plain")
-                else:
-                    self.send_header("Content-Type","application/octet-stream")
-
-                self.end_headers()
-
-                with open(filepath, "rb") as f:
+                    self.send_response(200)
+                    self.send_header("Content-Disposition",
+                                     f'attachment; filename="{filename}"')
+                    self.end_headers()
                     self.wfile.write(f.read())
             return
 
-        if path == "/api/list":
-            files = os.listdir(os.getcwd())
-            self.send_response(200)
-            self.end_headers()
-            self.wfile.write(json.dumps(files).encode())
-            return
-
     def do_POST(self):
-        if self.path == "/api/upload":
-            content_length = int(self.headers['Content-Length'])
-            body = self.rfile.read(content_length)
+        content_length = int(self.headers['Content-Length'])
+        body = self.rfile.read(content_length)
 
-            boundary = self.headers['Content-Type'].split("boundary=")[-1]
-            parts = body.split(("--" + boundary).encode())
+        boundary = self.headers['Content-Type'].split("boundary=")[-1]
+        parts = body.split(("--" + boundary).encode())
 
-            for part in parts:
-                if b"filename=" in part:
-                    filename = part.split(b'filename="')[1].split(b'"')[0].decode()
-                    filedata = part.split(b"\r\n\r\n")[1].rstrip(b"\r\n--")
+        for part in parts:
+            if b"filename=" in part:
+                filename = part.split(b'filename="')[1].split(b'"')[0].decode()
+                filedata = part.split(b"\r\n\r\n")[1].rstrip(b"\r\n--")
 
-                    filepath = os.path.join(os.getcwd(), filename)
+                filepath = os.path.join(os.getcwd(), filename)
 
-                    if os.path.exists(filepath):
-                        filepath += "_new"
+                with open(filepath, "wb") as f:
+                    f.write(filedata)
 
-                    with open(filepath, "wb") as f:
-                        f.write(filedata)
+                log(f"Uploaded: {filename}")
 
-                    log(f"📤 Uploaded: {filename} from {self.client_address[0]}")
+        self.send_response(200)
+        self.end_headers()
 
-            self.send_response(200)
-            self.end_headers()
 
 # -----------------------------
-# SERVER CONTROL
+# NETWORK
 # -----------------------------
 def get_ip():
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -207,6 +107,9 @@ def get_ip():
     return ip
 
 
+# -----------------------------
+# SERVER CONTROL
+# -----------------------------
 def start_server():
     global server
 
@@ -214,7 +117,7 @@ def start_server():
     folder = folder_var.get()
 
     if not os.path.isdir(folder):
-        log("❌ Invalid folder")
+        log("Invalid folder")
         return
 
     os.chdir(folder)
@@ -225,12 +128,14 @@ def start_server():
             server = httpd
             ip = get_ip()
 
-            status.set("🟢 RUNNING")
-            local.set(f"http://127.0.0.1:{port}")
-            net.set(f"http://{ip}:{port}")
+            url = f"http://{ip}:{port}"
 
-            log("✅ Server Started")
-            log(net.get())
+            status.set("RUNNING")
+            local.set(f"http://127.0.0.1:{port}")
+            net.set(url)
+
+            log("Server Started")
+            log(url)
 
             httpd.serve_forever()
 
@@ -241,8 +146,8 @@ def stop_server():
     global server
     if server:
         server.shutdown()
-        status.set("🔴 STOPPED")
-        log("⛔ Server stopped")
+        status.set("STOPPED")
+        log("Server stopped")
 
 
 def browse():
@@ -252,7 +157,15 @@ def browse():
 
 
 def open_browser():
-    webbrowser.open(net.get())
+    if net.get():
+        webbrowser.open(net.get())
+
+
+def copy_ip():
+    if net.get():
+        root.clipboard_clear()
+        root.clipboard_append(net.get())
+        log("IP copied")
 
 
 def log(msg):
@@ -261,57 +174,71 @@ def log(msg):
 
 
 # -----------------------------
-# GUI (DASHBOARD)
+# GUI (WHITE PROFESSIONAL)
 # -----------------------------
 root = tk.Tk()
-root.title("FileWave Pro Dashboard")
-root.geometry("750x550")
-root.configure(bg="#0f172a")
+root.title("FileWaver Basic Server")
+root.geometry("720x520")
+root.configure(bg="#f9fafb")  # WHITE BACKGROUND
 
 folder_var = tk.StringVar(value=str(Path.cwd()))
-status = tk.StringVar(value="🔴 STOPPED")
+status = tk.StringVar(value="STOPPED")
 local = tk.StringVar()
 net = tk.StringVar()
 
-tk.Label(root, text="🚀 FileWave Server",
+# HEADER
+tk.Label(root, text="FileWaver Basic Server",
          font=("Segoe UI", 20, "bold"),
-         bg="#0f172a", fg="#38bdf8").pack(pady=10)
+         bg="#f9fafb", fg="#111827").pack(pady=15)
 
-card = tk.Frame(root, bg="#1e293b")
+# CARD
+card = tk.Frame(root, bg="white", bd=1, relief="solid")
 card.pack(padx=20, pady=10, fill="x")
 
-tk.Label(card, text="📂 Folder", bg="#1e293b", fg="white").pack(anchor="w", padx=10)
-tk.Entry(card, textvariable=folder_var, bg="#334155", fg="white", width=70).pack(padx=10)
-tk.Button(card, text="Browse", bg="#38bdf8", command=browse).pack(pady=5)
+tk.Label(card, text="Shared Folder", bg="white", fg="#374151").pack(anchor="w", padx=10, pady=5)
+tk.Entry(card, textvariable=folder_var, bg="#f3f4f6", fg="black", width=70).pack(padx=10)
 
-tk.Label(card, text="Port", bg="#1e293b", fg="white").pack(anchor="w", padx=10)
-port_entry = tk.Entry(card)
+tk.Button(card, text="Browse", bg="#2563eb", fg="white",
+          command=browse).pack(pady=8)
+
+tk.Label(card, text="Port", bg="white", fg="#374151").pack(anchor="w", padx=10)
+port_entry = tk.Entry(card, bg="#f3f4f6", fg="black")
 port_entry.insert(0, "8000")
 port_entry.pack(padx=10, pady=5)
 
-btn_frame = tk.Frame(root, bg="#0f172a")
-btn_frame.pack()
+# BUTTONS
+btn_frame = tk.Frame(root, bg="#f9fafb")
+btn_frame.pack(pady=10)
 
-tk.Button(btn_frame, text="▶ Start", bg="green", fg="white", command=start_server).grid(row=0, column=0, padx=10)
-tk.Button(btn_frame, text="⛔ Stop", bg="red", fg="white", command=stop_server).grid(row=0, column=1, padx=10)
-tk.Button(btn_frame, text="🌐 Open", bg="blue", fg="white", command=open_browser).grid(row=0, column=2, padx=10)
+tk.Button(btn_frame, text="Start", bg="#16a34a", fg="white",
+          width=10, command=start_server).grid(row=0, column=0, padx=8)
 
-status_frame = tk.Frame(root, bg="#1e293b")
+tk.Button(btn_frame, text="Stop", bg="#dc2626", fg="white",
+          width=10, command=stop_server).grid(row=0, column=1, padx=8)
+
+tk.Button(btn_frame, text="Open", bg="#2563eb", fg="white",
+          width=10, command=open_browser).grid(row=0, column=2, padx=8)
+
+tk.Button(btn_frame, text="Copy IP", bg="#0ea5e9", fg="white",
+          width=10, command=copy_ip).grid(row=0, column=3, padx=8)
+
+# STATUS
+status_frame = tk.Frame(root, bg="white", bd=1, relief="solid")
 status_frame.pack(padx=20, pady=10, fill="x")
 
-tk.Label(status_frame, text="Status:", bg="#1e293b", fg="white").grid(row=0, column=0)
-tk.Label(status_frame, textvariable=status, bg="#1e293b", fg="yellow").grid(row=0, column=1)
+tk.Label(status_frame, text="Status:", bg="white").grid(row=0, column=0, padx=5)
+tk.Label(status_frame, textvariable=status, bg="white", fg="#16a34a").grid(row=0, column=1)
 
+tk.Label(status_frame, text="Local:", bg="white").grid(row=1, column=0, padx=5)
+tk.Label(status_frame, textvariable=local, bg="white", fg="#2563eb").grid(row=1, column=1)
 
-tk.Label(status_frame, text="Local:", bg="#1e293b", fg="white").grid(row=1, column=0)
-tk.Label(status_frame, textvariable=local, bg="#1e293b", fg="cyan").grid(row=1, column=1)
+tk.Label(status_frame, text="Network:", bg="white").grid(row=2, column=0, padx=5)
+tk.Label(status_frame, textvariable=net, bg="white", fg="#16a34a").grid(row=2, column=1)
 
-tk.Label(status_frame, text="Network:", bg="#1e293b", fg="white").grid(row=2, column=0)
-tk.Label(status_frame, textvariable=net, bg="#1e293b", fg="lightgreen").grid(row=2, column=1)
+# LOGS
+tk.Label(root, text="Logs", bg="#f9fafb", fg="#111827").pack(anchor="w", padx=20)
 
-tk.Label(root, text="Logs", bg="#0f172a", fg="white").pack(anchor="w", padx=20)
-
-logs = scrolledtext.ScrolledText(root, bg="black", fg="white", height=12)
+logs = scrolledtext.ScrolledText(root, bg="white", fg="black", height=10)
 logs.pack(padx=20, pady=5, fill="both", expand=True)
 
 root.mainloop()
