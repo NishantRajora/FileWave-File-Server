@@ -11,13 +11,116 @@ import urllib.parse
 import json
 import mimetypes
 import time
+import hashlib
 
 PORT = 8000
 server = None
 log_queue = []
+connected_peers = {}
+_lock = threading.Lock()
+
 
 # ─────────────────────────────────────────────
-# CLIENT-SIDE HTML PAGE
+# SIZE HELPERS
+# ─────────────────────────────────────────────
+def _fmt_size(sz):
+    for unit in ['B', 'KB', 'MB', 'GB']:
+        if sz < 1024:
+            return f"{int(sz)} {unit}" if unit == 'B' else f"{sz:.1f} {unit}"
+        sz /= 1024
+    return f"{sz:.1f} TB"
+
+
+def _fmt_size_safe(filename):
+    try:
+        return _fmt_size(os.path.getsize(os.path.join(os.getcwd(), filename)))
+    except Exception:
+        return ""
+
+
+# ─────────────────────────────────────────────
+# DEVICE / BROWSER DETECTION
+# ─────────────────────────────────────────────
+def parse_user_agent(ua):
+    ua = ua or ""
+    ul = ua.lower()
+
+    if any(x in ul for x in ["iphone", "android", "mobile", "blackberry", "windows phone"]):
+        device = "📱 Mobile"
+    elif any(x in ul for x in ["ipad", "tablet", "kindle"]):
+        device = "📟 Tablet"
+    else:
+        device = "🖥  Desktop"
+
+    if "edg/" in ul or "edge/" in ul:
+        browser = "Edge"
+    elif "chrome/" in ul and "chromium" not in ul:
+        browser = "Chrome"
+    elif "firefox/" in ul:
+        browser = "Firefox"
+    elif "safari/" in ul and "chrome" not in ul:
+        browser = "Safari"
+    elif "curl" in ul:
+        browser = "curl"
+    elif "python" in ul:
+        browser = "Python"
+    else:
+        browser = "Browser"
+
+    return device, browser
+
+
+# ─────────────────────────────────────────────
+# UC-11 — PEER TRACKER
+# ─────────────────────────────────────────────
+def record_peer(ip, ua):
+    device, browser = parse_user_agent(ua)
+    with _lock:
+        if ip not in connected_peers:
+            connected_peers[ip] = {
+                "ip": ip,
+                "device": device,
+                "browser": browser,
+                "first_seen": time.strftime("%H:%M:%S"),
+                "requests": 0,
+            }
+        connected_peers[ip]["last_seen"] = time.strftime("%H:%M:%S")
+        connected_peers[ip]["requests"] += 1
+
+
+# ─────────────────────────────────────────────
+# SIMPLE MODE — bare HTML, zero styling, no JS
+# ─────────────────────────────────────────────
+def render_simple_page(files):
+    file_rows = "\n".join(
+        f'<li><a href="/files/{urllib.parse.quote(f)}" download>{f}</a></li>'
+        for f in files
+    ) or '<li><em>No files available.</em></li>'
+
+    return f"""<!DOCTYPE html>
+<html>
+<head><meta charset="UTF-8"><title>FileWave Basic</title></head>
+<body>
+<h2>FileWave Basic</h2>
+
+<h3>Download Files</h3>
+<ul>
+{file_rows}
+</ul>
+
+<h3>Upload a File</h3>
+<form method="post" action="/api/upload" enctype="multipart/form-data">
+  <input type="file" name="file" multiple><br><br>
+  <input type="submit" value="Upload">
+</form>
+
+<p><a href="/">Switch to Full UI</a></p>
+</body>
+</html>"""
+
+
+# ─────────────────────────────────────────────
+# FULL CLIENT-SIDE HTML PAGE
 # ─────────────────────────────────────────────
 def render_page():
     return r"""<!DOCTYPE html>
@@ -189,9 +292,8 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .icon-btn{width:28px;height:28px;border-radius:4px;border:1px solid var(--border2);background:var(--panel);color:var(--text-2);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;text-decoration:none;transition:all .15s}
 .icon-btn:hover{background:var(--blue);color:#fff;border-color:var(--blue)}
 .icon-btn.dl:hover{background:var(--green);color:#fff;border-color:var(--green)}
-
-/* share icon btn on file */
 .icon-btn.sh:hover{background:var(--yellow);color:#fff;border-color:var(--yellow)}
+.icon-btn.chk:hover{background:var(--green);color:#fff;border-color:var(--green)}
 
 .file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;padding:8px}
 .grid-card{background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:16px 10px 12px;text-align:center;cursor:pointer;transition:all .15s;animation:fadeIn .25s ease forwards;opacity:0}
@@ -238,6 +340,13 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .share-actions .btn{flex:1;min-width:100px;justify-content:center}
 .share-label{font-size:11px;color:var(--text-3);font-family:'IBM Plex Mono',monospace;text-align:center}
 
+/* ── PEERS MODAL ─────────────────────────── */
+.peer-card{padding:10px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);display:flex;flex-direction:column;gap:3px}
+.peer-card .pc-name{font-size:13px;font-weight:500;color:var(--text)}
+.peer-card .pc-ip{font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-2)}
+.peer-card .pc-time{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-3)}
+.peer-count-badge{background:var(--blue-dim);border:1px solid var(--blue);border-radius:99px;padding:2px 8px;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--blue)}
+
 /* ── TOAST ───────────────────────────────── */
 #toast-stack{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:6px;pointer-events:none}
 .toast{padding:9px 16px;border-radius:4px;font-size:12px;font-family:'IBM Plex Mono',monospace;border:1px solid;animation:toastSlide .25s ease forwards;box-shadow:0 4px 16px var(--shadow);max-width:300px}
@@ -247,7 +356,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 .toast.warn{background:rgba(234,179,8,.12);border-color:rgba(234,179,8,.35);color:var(--yellow)}
 @keyframes toastSlide{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:translateX(0)}}
 
-/* ── MOBILE OVERLAY (left panel slide-in) ── */
+/* ── MOBILE OVERLAY ─────────────────────── */
 @media(max-width:720px){
   .hamburger{display:flex}
   .nav-info{display:none}
@@ -260,7 +369,6 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
   .mobile-overlay{position:fixed;inset:0;top:48px;background:var(--modal-bg);z-index:199;display:none}
   .mobile-overlay.open{display:block}
   .right-panel{grid-column:1}
-  /* make file actions always visible on touch */
   .file-actions{opacity:1}
   .grid-dl{opacity:1}
 }
@@ -273,7 +381,6 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 <div class="app-shell">
 
   <nav class="navbar">
-    <!-- Hamburger (mobile only) -->
     <button class="hamburger" id="hamburger" onclick="toggleSidebar()" aria-label="Menu">☰</button>
 
     <div class="nav-brand">
@@ -291,14 +398,12 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
 
     <div class="nav-info" id="urlDisplay">Connecting…</div>
 
-    <!-- Share button -->
     <button class="nav-icon-btn" onclick="openShareModal()" title="Share Server">📡</button>
-
-    <!-- Theme toggle -->
+    <button class="nav-icon-btn" id="peerBtn" onclick="openPeersModal()" title="Connected Peers">👥</button>
+    <a class="nav-icon-btn" href="/simple" title="Simple Mode — no JS required" style="text-decoration:none">📟</a>
     <button class="nav-icon-btn" id="themeBtn" onclick="toggleTheme()" title="Toggle theme">🌙</button>
   </nav>
 
-  <!-- Mobile sidebar overlay -->
   <div class="mobile-overlay" id="mobileOverlay" onclick="closeSidebar()"></div>
 
   <div class="content">
@@ -328,6 +433,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
       <div class="stats-strip">
         <div class="stat-item"><span style="color:var(--blue)">●</span><strong id="statCount">0</strong> files</div>
         <div class="stat-item"><span style="color:var(--green)">●</span><strong id="statTypes">—</strong> types</div>
+        <div class="stat-item"><span style="color:var(--yellow)">●</span><strong id="statPeers">0</strong> peers</div>
         <div class="stat-item" id="statFilterWrap" style="display:none">
           <span style="color:var(--yellow)">◆</span><strong id="statFiltered">0</strong> shown
         </div>
@@ -388,9 +494,7 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
       </div>
       <div class="qr-wrap"><div id="qrCanvas"></div></div>
       <div class="share-actions">
-        <button class="btn btn-ghost" onclick="nativeShare()" id="nativeShareBtn" style="display:none">
-          ↗ Share…
-        </button>
+        <button class="btn btn-ghost" onclick="nativeShare()" id="nativeShareBtn" style="display:none">↗ Share…</button>
         <button class="btn btn-ghost" onclick="openShareUrl()">🌐 Open</button>
         <button class="btn btn-primary" onclick="copyShareUrl()">📋 Copy Link</button>
       </div>
@@ -398,10 +502,22 @@ body{font-family:'IBM Plex Sans',sans-serif;background:var(--bg);color:var(--tex
   </div>
 </div>
 
+<!-- ── PEERS MODAL ──────────────────────── -->
+<div class="modal-backdrop" id="peersModal">
+  <div class="modal">
+    <div class="modal-head">
+      <h2>👥 Connected Peers</h2>
+      <button class="modal-close" onclick="closePeersModal()">✕</button>
+    </div>
+    <div class="modal-body" id="peersBody" style="max-height:360px;overflow-y:auto">
+      <p style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-3)">Loading…</p>
+    </div>
+  </div>
+</div>
+
 <div id="toast-stack"></div>
 
 <script>
-// ── STATE ──────────────────────────────────
 let allFiles = [], currentView = 'list', activeFile = null;
 let currentNetUrl = '';
 
@@ -423,35 +539,27 @@ function icClass(f){return 'ic-'+classify(f)}
 function tagClass(f){return 'tag-'+classify(f)}
 function tagLabel(f){return getExt(f).toUpperCase()}
 
-// ── THEME ──────────────────────────────────
 const themeBtn = document.getElementById('themeBtn');
 function applyTheme(t){
   document.documentElement.setAttribute('data-theme',t);
   themeBtn.textContent = t==='dark'?'🌙':'☀️';
   localStorage.setItem('fw-theme',t);
 }
-(function(){
-  const saved = localStorage.getItem('fw-theme') || 'dark';
-  applyTheme(saved);
-})();
+(function(){applyTheme(localStorage.getItem('fw-theme')||'dark')})();
 function toggleTheme(){
-  const cur = document.documentElement.getAttribute('data-theme');
-  applyTheme(cur==='dark'?'light':'dark');
+  applyTheme(document.documentElement.getAttribute('data-theme')==='dark'?'light':'dark');
 }
 
-// ── MOBILE SIDEBAR ─────────────────────────
 function toggleSidebar(){
-  const lp = document.getElementById('leftPanel');
-  const ov = document.getElementById('mobileOverlay');
-  const open = lp.classList.toggle('open');
-  ov.classList.toggle('open', open);
+  const lp=document.getElementById('leftPanel'),ov=document.getElementById('mobileOverlay');
+  const open=lp.classList.toggle('open');
+  ov.classList.toggle('open',open);
 }
 function closeSidebar(){
   document.getElementById('leftPanel').classList.remove('open');
   document.getElementById('mobileOverlay').classList.remove('open');
 }
 
-// ── STATUS POLLING ─────────────────────────
 const pill=document.getElementById('statusPill');
 const pillTxt=document.getElementById('statusText');
 const urlDisp=document.getElementById('urlDisplay');
@@ -476,7 +584,6 @@ async function checkStatus(){
 checkStatus();
 setInterval(checkStatus,5000);
 
-// ── FILE LOADING ───────────────────────────
 async function loadFiles(){
   try{
     const r=await fetch('/api/list');
@@ -496,6 +603,16 @@ function updateStats(filtered){
     document.getElementById('statFiltered').textContent=filtered.length;
   }else wrap.style.display='none';
 }
+
+async function refreshPeerCount(){
+  try{
+    const r=await fetch('/api/peers');
+    const peers=await r.json();
+    document.getElementById('statPeers').textContent=peers.length;
+  }catch{}
+}
+refreshPeerCount();
+setInterval(refreshPeerCount,8000);
 
 function filterFiles(){renderFiles()}
 
@@ -529,6 +646,7 @@ function renderFiles(){
         </div>
         <div class="file-actions">
           <button class="icon-btn sh" onclick="quickShare(event,'${encodeURIComponent(f)}','${f.replace(/'/g,"\\'")}')">📤</button>
+          <button class="icon-btn chk" onclick="showChecksum(event,'${encodeURIComponent(f)}','${f.replace(/'/g,"\\'")}')">🔐</button>
           <a class="icon-btn dl" href="/files/${encodeURIComponent(f)}" download onclick="event.stopPropagation()" title="Download">⬇</a>
         </div>
       </div>`).join('')}</div>`;
@@ -543,7 +661,6 @@ function renderFiles(){
   }
 }
 
-// ── UPLOAD ────────────────────────────────
 function uploadFiles(files){
   const wrap=document.getElementById('progressWrap'),
         fill=document.getElementById('progressFill'),
@@ -567,13 +684,11 @@ function uploadFiles(files){
   });
 }
 
-// drag-drop
 const dz=document.getElementById('dropZone');
 ['dragover','dragenter'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.add('drag-over')}));
 ['dragleave','dragend','drop'].forEach(e=>dz.addEventListener(e,ev=>{ev.preventDefault();dz.classList.remove('drag-over')}));
 dz.addEventListener('drop',ev=>{ev.preventDefault();if(ev.dataTransfer.files.length)uploadFiles(ev.dataTransfer.files)});
 
-// ── PREVIEW ───────────────────────────────
 function preview(enc,fname){
   activeFile=fname;
   const ext=getExt(fname),url=`/view/${enc}`,body=document.getElementById('previewBody');
@@ -591,7 +706,7 @@ function preview(enc,fname){
   else body.innerHTML=`<div style="text-align:center;color:var(--text-3)"><div style="font-size:56px;margin-bottom:16px;opacity:.3">${icon(fname)}</div><p style="font-family:var(--mono);font-size:12px;margin-bottom:16px">No preview for .${ext.toUpperCase()}</p><a class="btn btn-primary" href="/files/${enc}" download>⬇ Download File</a></div>`;
   document.getElementById('previewPlaceholder').style.display='none';
   document.getElementById('previewPane').classList.add('active');
-  closeSidebar(); // close sidebar on mobile after selecting
+  closeSidebar();
 }
 function closePrev(){
   document.getElementById('previewPane').classList.remove('active');
@@ -599,23 +714,20 @@ function closePrev(){
   document.getElementById('previewBody').innerHTML='';
   activeFile=null;
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePrev();closeShareModal()}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePrev();closeShareModal();closePeersModal()}});
 
-// ── SHARE MODAL ───────────────────────────
 let qrGenerated=false;
 function openShareModal(){
   const modal=document.getElementById('shareModal');
   const url=currentNetUrl||window.location.href;
   document.getElementById('shareUrlBox').textContent=url;
   modal.classList.add('open');
-  // Generate QR
   if(!qrGenerated){
     const qc=document.getElementById('qrCanvas');
     qc.innerHTML='';
     new QRCode(qc,{text:url,width:180,height:180,colorDark:'#3b82f6',colorLight:'#111318',correctLevel:QRCode.CorrectLevel.H});
-    qrGenerated=false; // regenerate if url changes
+    qrGenerated=false;
   }
-  // Show native share if available
   if(navigator.share)document.getElementById('nativeShareBtn').style.display='';
 }
 function closeShareModal(){document.getElementById('shareModal').classList.remove('open')}
@@ -624,7 +736,6 @@ document.getElementById('shareModal').addEventListener('click',function(e){if(e.
 function copyShareUrl(){
   const url=currentNetUrl||window.location.href;
   navigator.clipboard.writeText(url).then(()=>toast('Link copied!','success')).catch(()=>{
-    // fallback
     const ta=document.createElement('textarea');ta.value=url;
     document.body.appendChild(ta);ta.select();document.execCommand('copy');
     document.body.removeChild(ta);toast('Link copied!','success');
@@ -635,7 +746,6 @@ function nativeShare(){
   if(navigator.share)navigator.share({title:'FileWave Pro',url:currentNetUrl||window.location.href}).catch(()=>{});
 }
 
-// Per-file quick share
 function quickShare(evt,enc,fname){
   evt.stopPropagation();
   const base=currentNetUrl||window.location.origin;
@@ -650,7 +760,53 @@ function copyToClipboard(url,fname){
   navigator.clipboard.writeText(url).then(()=>toast(`Link for "${fname}" copied!`,'success')).catch(()=>toast('Copy failed','error'));
 }
 
-// ── TOAST ─────────────────────────────────
+async function openPeersModal(){
+  const modal=document.getElementById('peersModal');
+  modal.classList.add('open');
+  const body=document.getElementById('peersBody');
+  body.innerHTML='<p style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text-3)">Loading peers…</p>';
+  try{
+    const r=await fetch('/api/peers');
+    const peers=await r.json();
+    if(!peers.length){
+      body.innerHTML='<p style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text-3)">No peers have connected yet.</p>';
+      return;
+    }
+    body.style.display='flex';
+    body.style.flexDirection='column';
+    body.style.gap='8px';
+    body.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <span style="font-size:11px;color:var(--text-3);font-family:'IBM Plex Mono',monospace">ACTIVE PEERS</span>
+        <span class="peer-count-badge">${peers.length} connected</span>
+      </div>
+      ${peers.map(p=>`
+        <div class="peer-card">
+          <div class="pc-name">${p.device} &nbsp;·&nbsp; ${p.browser}</div>
+          <div class="pc-ip">IP: <strong style="color:var(--text)">${p.ip}</strong> &nbsp;·&nbsp; ${p.requests} request(s)</div>
+          <div class="pc-time">First: ${p.first_seen} &nbsp;·&nbsp; Last seen: ${p.last_seen}</div>
+        </div>`).join('')}`;
+  }catch{
+    body.innerHTML='<p style="color:var(--red);font-size:12px;font-family:\'IBM Plex Mono\',monospace">Failed to load peers.</p>';
+  }
+}
+function closePeersModal(){document.getElementById('peersModal').classList.remove('open')}
+document.getElementById('peersModal').addEventListener('click',function(e){if(e.target===this)closePeersModal()});
+
+async function showChecksum(evt,enc,fname){
+  evt.stopPropagation();
+  toast('Computing SHA-256…','info');
+  try{
+    const r=await fetch('/api/checksum/'+enc);
+    if(!r.ok) throw new Error('not found');
+    const d=await r.json();
+    navigator.clipboard.writeText(d.sha256).catch(()=>{});
+    toast('SHA-256: '+d.sha256.slice(0,20)+'… (copied!)','success');
+  }catch(e){
+    toast('Checksum failed','error');
+  }
+}
+
 function toast(msg,type='info'){
   const stack=document.getElementById('toast-stack'),el=document.createElement('div');
   el.className=`toast ${type}`;
@@ -667,79 +823,40 @@ loadFiles();
 
 
 # ─────────────────────────────────────────────
-# DEVICE / BROWSER DETECTION (server-side)
-# ─────────────────────────────────────────────
-def parse_user_agent(ua):
-    ua = ua or ""
-    ul = ua.lower()
-
-    # Device type
-    if any(x in ul for x in ["iphone", "android", "mobile", "blackberry", "windows phone"]):
-        device = "📱 Mobile"
-    elif any(x in ul for x in ["ipad", "tablet", "kindle"]):
-        device = "📟 Tablet"
-    else:
-        device = "🖥  Desktop"
-
-    # Browser
-    if "edg/" in ul or "edge/" in ul:
-        browser = "Edge"
-    elif "chrome/" in ul and "chromium" not in ul:
-        browser = "Chrome"
-    elif "firefox/" in ul:
-        browser = "Firefox"
-    elif "safari/" in ul and "chrome" not in ul:
-        browser = "Safari"
-    elif "curl" in ul:
-        browser = "curl"
-    elif "python" in ul:
-        browser = "Python"
-    else:
-        browser = "Browser"
-
-    return device, browser
-
-
-# ─────────────────────────────────────────────
 # REQUEST HANDLER
 # ─────────────────────────────────────────────
 class Handler(http.server.BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
-        # Suppress default console output; we use log_queue instead
         pass
 
     def _log_access(self, method, path, status=200):
-        """Push a formatted access entry to the tkinter activity log."""
-        # Skip high-frequency polling endpoints to keep the log readable
         if path in ("/api/status",):
             return
-
         ip = self.client_address[0]
         ua = self.headers.get("User-Agent", "")
         device, browser = parse_user_agent(ua)
-
-        # Colour level based on status
         if status >= 500:
             level = "error"
         elif status >= 400:
             level = "warn"
-        elif path == "/api/upload" or (method == "POST"):
+        elif path == "/api/upload" or method == "POST":
             level = "success"
         elif path.startswith("/files/") or path.startswith("/view/"):
             level = "info"
         else:
             level = "muted"
-
-        # Shorten path for readability
         short_path = path if len(path) <= 40 else path[:38] + "…"
         msg = f"{device}  {browser}  ·  {ip}  ·  {method} {short_path}  [{status}]"
         log_queue.append((level, msg))
 
     def do_GET(self):
         path = urllib.parse.unquote(self.path)
-        status = 200
 
+        if path not in ("/api/status",):
+            record_peer(self.client_address[0], self.headers.get("User-Agent", ""))
+
+        # ── Root → full UI ───────────────────
         if path == "/":
             self.send_response(200)
             self.send_header("Content-type", "text/html; charset=utf-8")
@@ -748,6 +865,22 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self._log_access("GET", path, 200)
             return
 
+        # ── Simple Mode ───────────────────────
+        if path == "/simple":
+            try:
+                files = sorted(f for f in os.listdir(os.getcwd())
+                               if os.path.isfile(os.path.join(os.getcwd(), f)))
+            except Exception:
+                files = []
+            html = render_simple_page(files)
+            self.send_response(200)
+            self.send_header("Content-type", "text/html; charset=utf-8")
+            self.end_headers()
+            self.wfile.write(html.encode())
+            self._log_access("GET", path, 200)
+            return
+
+        # ── Status ────────────────────────────
         if path == "/api/status":
             import socket as _s
             s = _s.socket(_s.AF_INET, _s.SOCK_DGRAM)
@@ -765,9 +898,46 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", "*")
             self.end_headers()
             self.wfile.write(payload.encode())
-            # Don't log status pings (too noisy)
             return
 
+        # ── Peers list ────────────────────────
+        if path == "/api/peers":
+            with _lock:
+                peers_list = list(connected_peers.values())
+            self.send_response(200)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+            self.wfile.write(json.dumps(peers_list).encode())
+            return
+
+        # ── SHA-256 checksum ──────────────────
+        if path.startswith("/api/checksum/"):
+            filename = urllib.parse.unquote(path[14:])
+            filepath = os.path.join(os.getcwd(), filename)
+            if os.path.isfile(filepath):
+                try:
+                    sha = hashlib.sha256()
+                    with open(filepath, "rb") as f:
+                        for chunk in iter(lambda: f.read(65536), b""):
+                            sha.update(chunk)
+                    result = json.dumps({"file": filename, "sha256": sha.hexdigest()})
+                    self.send_response(200)
+                    self.send_header("Content-Type", "application/json")
+                    self.end_headers()
+                    self.wfile.write(result.encode())
+                    self._log_access("GET", path, 200)
+                except Exception as e:
+                    log_queue.append(("error", f"Checksum error: {e}"))
+                    self.send_response(500)
+                    self.end_headers()
+            else:
+                self.send_response(404)
+                self.end_headers()
+                self._log_access("GET", path, 404)
+            return
+
+        # ── File download ─────────────────────
         if path.startswith("/files/"):
             filename = urllib.parse.unquote(path[7:])
             filepath = os.path.join(os.getcwd(), filename)
@@ -782,10 +952,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write(data)
                 self._log_access("GET", path, 200)
             else:
-                self.send_response(404); self.end_headers()
+                self.send_response(404)
+                self.end_headers()
                 self._log_access("GET", path, 404)
             return
 
+        # ── File view (preview) ───────────────
         if path.startswith("/view/"):
             filename = urllib.parse.unquote(path[6:])
             filepath = os.path.join(os.getcwd(), filename)
@@ -799,10 +971,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
                 self.wfile.write(data)
                 self._log_access("GET", path, 200)
             else:
-                self.send_response(404); self.end_headers()
+                self.send_response(404)
+                self.end_headers()
                 self._log_access("GET", path, 404)
             return
 
+        # ── File list ─────────────────────────
         if path == "/api/list":
             try:
                 files = [f for f in os.listdir(os.getcwd())
@@ -816,14 +990,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self._log_access("GET", path, 200)
             return
 
-        self.send_response(404); self.end_headers()
+        self.send_response(404)
+        self.end_headers()
         self._log_access("GET", path, 404)
 
     def do_POST(self):
+        record_peer(self.client_address[0], self.headers.get("User-Agent", ""))
+
         if self.path == "/api/upload":
             try:
-                length = int(self.headers["Content-Length"])
-                body   = self.rfile.read(length)
+                length   = int(self.headers["Content-Length"])
+                body     = self.rfile.read(length)
                 boundary = self.headers["Content-Type"].split("boundary=")[-1].encode()
                 parts    = body.split(b"--" + boundary)
                 saved    = []
@@ -839,8 +1016,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
                             f.write(fdata)
                         saved.append(fname)
                 if saved:
-                    ip = self.client_address[0]
-                    ua = self.headers.get("User-Agent", "")
+                    ip     = self.client_address[0]
+                    ua     = self.headers.get("User-Agent", "")
                     device, browser = parse_user_agent(ua)
                     log_queue.append(("success",
                         f"{device}  {browser}  ·  {ip}  ·  ⬆ Uploaded: {', '.join(saved)}"))
@@ -867,7 +1044,7 @@ def get_ip():
 
 
 # ─────────────────────────────────────────────
-# TKINTER GUI  —  Canva-style light theme
+# TKINTER GUI
 # ─────────────────────────────────────────────
 class App(tk.Tk):
 
@@ -906,12 +1083,11 @@ class App(tk.Tk):
         self._server_obj = None
         self._running    = False
         self._log_after  = None
-        self._dot_anim   = False
 
         self._build_ui()
         self._poll_logs()
+        self._poll_peers()
 
-    # ── Widget helpers ────────────────────────
     def _frame(self, parent, bg=None, **kw):
         return tk.Frame(parent, bg=bg or self.BG, **kw)
 
@@ -976,15 +1152,11 @@ class App(tk.Tk):
             fg=self.MIST, bg=bg).pack(side="left")
         return f
 
-    # ─────────────────────────────────────────
-    # BUILD UI
-    # ─────────────────────────────────────────
     def _build_ui(self):
         self._build_navbar()
         self._build_body()
         self._build_statusbar()
 
-    # ── Navbar ────────────────────────────────
     def _build_navbar(self):
         nav = tk.Frame(self, bg=self.WHITE, height=52)
         nav.pack(fill="x")
@@ -1010,6 +1182,11 @@ class App(tk.Tk):
         right = tk.Frame(nav, bg=self.WHITE)
         right.pack(side="right", padx=20)
 
+        self._peer_badge = tk.Label(right, text="👥 0 peers",
+            font=("Helvetica", 9), bg=self.BLUE_T, fg=self.BLUE,
+            padx=8, pady=4)
+        self._peer_badge.pack(side="right", padx=(8, 0))
+
         self._status_frame = tk.Frame(right, bg=self.RED_T, padx=10, pady=4)
         self._status_frame.pack(side="right")
 
@@ -1021,7 +1198,6 @@ class App(tk.Tk):
             font=("Helvetica", 9, "bold"), bg=self.RED_T, fg=self.RED)
         self._status_lbl.pack(side="left")
 
-    # ── Two-column body ───────────────────────
     def _build_body(self):
         body = tk.Frame(self, bg=self.BG)
         body.pack(fill="both", expand=True)
@@ -1038,7 +1214,6 @@ class App(tk.Tk):
         self._build_left(left)
         self._build_right(right)
 
-    # ── LEFT PANEL ────────────────────────────
     def _build_left(self, parent):
         canvas = tk.Canvas(parent, bg=self.WHITE, highlightthickness=0)
         canvas.pack(fill="both", expand=True)
@@ -1050,7 +1225,6 @@ class App(tk.Tk):
     def _build_left_inner(self, p):
         pad = dict(padx=20)
 
-        # Hero strip
         hero = tk.Frame(p, bg=self.LAVENDER)
         hero.pack(fill="x")
         tk.Label(hero, text="Your local file server  📡",
@@ -1059,7 +1233,6 @@ class App(tk.Tk):
 
         tk.Frame(p, bg=self.BG, height=16).pack(fill="x")
 
-        # ── Folder ──
         self._section_lbl(p, "  SERVE FOLDER", bg=self.WHITE).pack(**pad, fill="x")
         row1 = tk.Frame(p, bg=self.WHITE)
         row1.pack(fill="x", **pad, pady=(0, 10))
@@ -1067,7 +1240,6 @@ class App(tk.Tk):
         self._entry(row1, self.folder_var).pack(side="left", fill="x", expand=True, padx=(0, 8))
         self._ghost_btn(row1, "Browse", self._browse).pack(side="left")
 
-        # ── Port ──
         self._section_lbl(p, "  PORT", bg=self.WHITE).pack(**pad, fill="x")
         row2 = tk.Frame(p, bg=self.WHITE)
         row2.pack(fill="x", **pad, pady=(0, 4))
@@ -1078,7 +1250,6 @@ class App(tk.Tk):
 
         self._divider(p).pack(fill="x", **pad, pady=16)
 
-        # ── Controls ──
         self._section_lbl(p, "  SERVER CONTROL", bg=self.WHITE).pack(**pad, fill="x")
         btns = tk.Frame(p, bg=self.WHITE)
         btns.pack(fill="x", **pad, pady=(0, 4))
@@ -1086,9 +1257,16 @@ class App(tk.Tk):
         self._btn(btns, "■  Stop", self._stop, bg=self.RED, hover="#DC2626").pack(side="left", padx=(0, 8))
         self._ghost_btn(btns, "🌐  Open Browser", self._open_browser).pack(side="left")
 
+        tk.Frame(p, bg=self.WHITE, height=8).pack(fill="x")
+        simple_row = tk.Frame(p, bg=self.WHITE)
+        simple_row.pack(fill="x", **pad, pady=(0, 4))
+        self._ghost_btn(simple_row, "📟  Open Simple Mode",
+                        self._open_simple, fg=self.SLATE).pack(side="left")
+        self._label(simple_row, "  (no JS — for old devices)",
+                    fg=self.MIST, bg=self.WHITE, font=("Helvetica", 9)).pack(side="left")
+
         self._divider(p).pack(fill="x", **pad, pady=16)
 
-        # ── Connection URLs ──
         self._section_lbl(p, "  CONNECTION DETAILS", bg=self.WHITE).pack(**pad, fill="x")
         conn = tk.Frame(p, bg=self.WHITE)
         conn.pack(fill="x", **pad, pady=(0, 4))
@@ -1113,7 +1291,6 @@ class App(tk.Tk):
 
         self._divider(p).pack(fill="x", **pad, pady=16)
 
-        # ── Copy buttons ──
         copy_row = tk.Frame(p, bg=self.WHITE)
         copy_row.pack(fill="x", **pad, pady=(0, 10))
         self._ghost_btn(copy_row, "📋 Copy Local",
@@ -1123,18 +1300,18 @@ class App(tk.Tk):
 
         self._divider(p).pack(fill="x", **pad, pady=10)
 
-        # ── Tip ──
         tip = tk.Frame(p, bg=self.AMBER_T, padx=14, pady=12)
         tip.pack(fill="x", **pad, pady=(0, 20))
         tk.Label(tip, text="💡  Tip", font=("Helvetica", 9, "bold"),
                  bg=self.AMBER_T, fg=self.AMBER).pack(anchor="w")
-        tk.Label(tip, text="Share your Network URL with\ndevices on the same Wi-Fi.\nClick any URL above to copy it.",
+        tk.Label(tip,
+                 text="Share your Network URL with devices on the same Wi-Fi.\n"
+                      "Use 📟 Simple Mode for old devices or browsers without JS.\n"
+                      "Click any URL above to copy it.",
                  font=("Helvetica", 9), bg=self.AMBER_T, fg=self.INK,
                  justify="left").pack(anchor="w", pady=(4, 0))
 
-    # ── RIGHT PANEL: Activity log ─────────────
     def _build_right(self, parent):
-        # Header
         header = tk.Frame(parent, bg=self.WHITE, height=44)
         header.pack(fill="x")
         header.pack_propagate(False)
@@ -1143,20 +1320,17 @@ class App(tk.Tk):
                  font=("Helvetica", 12, "bold"),
                  bg=self.WHITE, fg=self.INK).pack(side="left", padx=16, pady=10)
 
-        # Legend
         legend = tk.Frame(header, bg=self.WHITE)
         legend.pack(side="left", padx=8)
         for sym, fg, tip in [("🖥", self.SLATE, "Desktop"),
                               ("📱", self.SLATE, "Mobile"),
                               ("📟", self.SLATE, "Tablet")]:
-            lbl = tk.Label(legend, text=f"{sym} {tip}", font=("Helvetica", 8),
-                           bg=self.WHITE, fg=fg)
-            lbl.pack(side="left", padx=4)
+            tk.Label(legend, text=f"{sym} {tip}", font=("Helvetica", 8),
+                     bg=self.WHITE, fg=fg).pack(side="left", padx=4)
 
         self._ghost_btn(header, "Clear", self._clear_log,
                         fg=self.SLATE, font_size=9).pack(side="right", padx=12, pady=8)
 
-        # Log text widget
         log_bg = tk.Frame(parent, bg=self.BG)
         log_bg.pack(fill="both", expand=True, padx=16, pady=12)
 
@@ -1186,7 +1360,6 @@ class App(tk.Tk):
         sb.pack(side="right", fill="y")
         self.log_box.configure(yscrollcommand=sb.set)
 
-        # Colour tags
         self.log_box.tag_config("ts",      foreground=self.MIST)
         self.log_box.tag_config("success", foreground=self.GREEN)
         self.log_box.tag_config("error",   foreground=self.RED)
@@ -1197,7 +1370,6 @@ class App(tk.Tk):
         self._log("FileWave Pro ready.  Choose a folder and start the server.", "muted")
         self._log("Device  ·  Browser  ·  IP  ·  Method  Path  [status]", "muted")
 
-    # ── Status bar ────────────────────────────
     def _build_statusbar(self):
         bar = tk.Frame(self, bg=self.WHITE, height=28)
         bar.pack(fill="x", side="bottom")
@@ -1209,7 +1381,6 @@ class App(tk.Tk):
         tk.Label(bar, text="FileWave Pro  ",
             font=("Helvetica", 9), bg=self.WHITE, fg=self.MIST).pack(side="right")
 
-    # ── Actions ───────────────────────────────
     def _browse(self):
         p = filedialog.askdirectory()
         if p:
@@ -1244,6 +1415,7 @@ class App(tk.Tk):
                     log_queue.append(("success", f"Server started · port {port}"))
                     log_queue.append(("info",    f"Local   → {local_url}"))
                     log_queue.append(("info",    f"Network → {net_url}"))
+                    log_queue.append(("muted",   f"Simple Mode → {net_url}/simple"))
                     httpd.serve_forever()
             except Exception as e:
                 log_queue.append(("error", f"Error: {e}"))
@@ -1273,6 +1445,14 @@ class App(tk.Tk):
         else:
             self._log("Start the server first.", "warn")
 
+    def _open_simple(self):
+        url = self.net_var.get()
+        if url and url != "Not running":
+            webbrowser.open(url + "/simple")
+            self._log(f"Opened Simple Mode → {url}/simple", "info")
+        else:
+            self._log("Start the server first.", "warn")
+
     def _copy_url(self, url):
         if url and url != "Not running":
             self.clipboard_clear()
@@ -1286,7 +1466,6 @@ class App(tk.Tk):
         self.log_box.delete("1.0", "end")
         self.log_box.config(state="disabled")
 
-    # ── Live pill + dot animation ─────────────
     def _set_live(self, live):
         if live:
             self._status_frame.config(bg=self.GREEN_T)
@@ -1294,7 +1473,6 @@ class App(tk.Tk):
             self._status_lbl.config(bg=self.GREEN_T, fg=self.GREEN, text=" LIVE")
             self._animate_dot()
         else:
-            self._dot_anim = False
             self._status_frame.config(bg=self.RED_T)
             self._status_dot.config(bg=self.RED_T, fg=self.RED)
             self._status_lbl.config(bg=self.RED_T, fg=self.RED, text=" OFFLINE")
@@ -1305,7 +1483,6 @@ class App(tk.Tk):
         self._status_dot.config(fg=self.GREEN if visible else self.GREEN_T)
         self.after(900, lambda: self._animate_dot(not visible))
 
-    # ── Log writer ────────────────────────────
     def _log(self, msg, level="muted"):
         ts = time.strftime("%H:%M:%S")
         icons = {"success": "✓", "error": "✗", "warn": "⚠", "info": "→", "muted": "·"}
@@ -1322,6 +1499,12 @@ class App(tk.Tk):
             level, msg = entry if isinstance(entry, tuple) else ("muted", entry)
             self._log(msg, level)
         self.after(250, self._poll_logs)
+
+    def _poll_peers(self):
+        with _lock:
+            count = len(connected_peers)
+        self._peer_badge.config(text=f"👥 {count} peer{'s' if count != 1 else ''}")
+        self.after(3000, self._poll_peers)
 
 
 # ─────────────────────────────────────────────
