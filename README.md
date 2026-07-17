@@ -10,6 +10,7 @@ Run it, point it at a folder, and instantly get a clean web interface to browse,
 
 > Desktop control panel on the left · Browser file manager on the right
 
+
 ```
 ┌─────────────────────────────────────────────────────────┐
 │ ⚡ FileWave Pro                              ● LIVE      │
